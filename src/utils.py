@@ -22,12 +22,12 @@ class ReadActionType(Enum):
 
 
 def _read_simple_action_from_keyboard():
-    print("Input for simple action:")
+    print("Input for simple action: `<field_id> <money_invested>`")
     field_id, money_invested = input().split(' ')
     return Action(field_id=int(field_id), money_invested=float(money_invested))
 
 def _read_full_action_from_keyboard():
-    print("Input for full action:")
+    print("Input for full action: `{'field_id': ..., 'money_invested': ...}`")
     json_ = json.loads(input())
     return Action(**json_)
 

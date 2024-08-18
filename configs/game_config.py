@@ -21,12 +21,12 @@ from src.players import Player
 # }
 
 GAME_CONFIG = {
-    "n_iterations": 2,
+    "n_iterations": 3,
     "players": {
         1: Player.from_dict({"name": "Anton", "money": 10, "id": 1}),
         2: Player.from_dict({"name": "Tata", "money": 10, "id": 2}),
         3: Player.from_dict({"name": "Dima", "money": 10, "id": 3}),
-        4: Player.from_dict({"name": "Yarik", "money": 10, "id": 4}),
+        # 4: Player.from_dict({"name": "Yarik", "money": 10, "id": 4}),
     },
     "fields": {
         1: SberBank(id=1, interest_rate=0.1),

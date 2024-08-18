@@ -5,9 +5,11 @@ from dataclasses import field
 
 # from src.players import Player
 from src.actions import Action
-
-PlayersActions = t.Dict[int, Action]
-PlayersRevenues = t.Dict[int, float] # player_id, money
+from src.constants import (
+    PlayersActions,
+    PlayersRevenues,
+    FIELD_ID,
+)
 
 @dataclass
 class Field:
@@ -25,6 +27,8 @@ class Field:
     ) -> PlayersRevenues:
         ...
         
+Fields = t.Dict[FIELD_ID, Field]
+
 @dataclass
 class SberBank(Field):
     
@@ -35,6 +39,7 @@ class SberBank(Field):
         self, 
         players_actions: PlayersActions
     ) -> PlayersRevenues:
+        
         return {
             player_id: action.money_invested * (1+self.interest_rate)
             for player_id, action in players_actions.items()

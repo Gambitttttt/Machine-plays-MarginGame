@@ -26,6 +26,7 @@ class Player:
     def action(self) -> Action:
         print(f"Action for player_id: {self.id}")
         action = read_action_from_keyboard()
+        action.money_invested = min(self.money, action.money_invested)
         self.history.append(action)
         return action
     
