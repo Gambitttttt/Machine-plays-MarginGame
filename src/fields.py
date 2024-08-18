@@ -3,7 +3,8 @@ import random
 from dataclasses import dataclass
 from dataclasses import field
 
-from src.players import Player, Action
+# from src.players import Player
+from src.actions import Action
 
 PlayersActions = t.Dict[int, Action]
 PlayersRevenues = t.Dict[int, float] # player_id, money
@@ -57,3 +58,29 @@ class CryptoStartup(Field):
             if action.field_id == self.id 
         }
     
+@dataclass
+class Manufactory(Field):
+    
+    name: str='Manufactory'
+    total_players_threshold: int=2
+    high_multiplier: float=2.1
+    low_multiplayer: float=0.1
+    
+    def return_revenues(
+        self, 
+        players_actions: PlayersActions
+    ) -> PlayersRevenues:
+        total_players = len([
+            player_id
+            for player_id, action in players_actions.items()
+            if action.field_id == self.id
+        ])
+        resulting_multiplier = (
+            self.high_multiplier if total_players <= self.total_players_threshold
+            else self.low_multiplayer
+        )
+        return {
+            player_id: action.money_invested * resulting_multiplier
+            for player_id, action in players_actions.items()
+            if action.field_id == self.id 
+        }
