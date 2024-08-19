@@ -7,6 +7,11 @@ python version: 3.10.13
 cd <this project>; export PYTHONPATH=$PWD; python src/game.py --config_path=./configs/game_config.json
 ```
 
+Alternatively, you can run the game with docker:
+```bash
+docker run -it --rm -v /path/to/game/config/file.json:/app/configs/game_config.json joitandr/margin_game
+```
+
 <img width="797" alt="image" src="https://github.com/user-attachments/assets/85c69926-ec7e-4c6d-afd1-6d2112567f1d">
 <img width="970" alt="image" src="https://github.com/user-attachments/assets/ffa8d125-8780-4223-b1fc-6f08608d7131">
 <img width="753" alt="image" src="https://github.com/user-attachments/assets/97c1aac6-7a69-49a7-aa2a-0bb7ae78ad23">
