@@ -41,7 +41,8 @@ def parse_args():
     parser.add_argument(
         '--config_path', 
         type=str, 
-        help='Path to the (json) config of the game'
+        help='Path to the (json) config of the game',
+        default='./configs/game_config.json'
     )
     args = parser.parse_args()
     return args
