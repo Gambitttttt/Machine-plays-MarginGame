@@ -3,7 +3,7 @@ Margin game
 python version: 3.10.13
 
 ```bash
-cd <this project>; export PYTHONPATH=$PWD; python src/game.py
+cd <this project>; export PYTHONPATH=$PWD; python src/game.py --config_path=<path to game config file .json>
 ```
 
 <img width="797" alt="image" src="https://github.com/user-attachments/assets/85c69926-ec7e-4c6d-afd1-6d2112567f1d">
