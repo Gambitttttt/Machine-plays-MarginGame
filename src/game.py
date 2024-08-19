@@ -3,14 +3,28 @@ from pprint import pprint
 import typing as t
 from dataclasses import Field, dataclass
 
+try:
+    from fabulous import color as fb_color
+    color = lambda text, color='magenta', bold=False: (
+        str(getattr(fb_color, 'bold')(getattr(fb_color, color)(text))) if bold 
+        else str(getattr(fb_color, color)(text))
+    )
+except ImportError as e:
+    color = lambda text, color='magenta', bold=False: str(text)
+    print("Exception raised trying to import fabulous!")
+    print(e, end='\n'*2)
+
 from src.fields import (
-    Fields
+    Fields,
+    SberBank,
+    CryptoStartup,
+    Manufactory
 )
 from src.players import (
     Player
 )
 from src.utils import (
-    # read_game_config,
+    read_game_config,
     ReadActionType,
     read_action_from_keyboard,
 )
@@ -47,8 +61,6 @@ class MarginGame:
             current_players_revenues = field.return_revenues(
                 players_actions=last_actions
             )
-            # print("current_players_revenues:")
-            # print(current_players_revenues)
             for player_id, revenue in current_players_revenues.items():
                 if player_id not in players_revenues:
                     players_revenues[player_id] = 0
@@ -79,12 +91,13 @@ class MarginGame:
         print("\n" + '='*50 + 'Final results' + '='*50 + '\n')
         print_players_money(players=self.players)
         winners, top_money = self.define_winner()
-        print(f'Winner(s): {winners} (money: {top_money})')
+        winners_str = ", ".join(f"{color(self.players[winner_id].name, color='magenta')} (player_id: {winner_id})" for winner_id in winners)
+        print(f'Winner(s): {winners_str} (money: {top_money})')
         
         
     def run_game(self) -> t.Dict[int, float]:
         for i in range(1, self.n_iterations+1):
-            print(f"\nIteration {i}:")
+            print(color(f"\nIteration {i}:", color='green', bold=True))
             self.request_for_actions()
             self.recompute_revenues()
             print_players_last_actions(players=self.players)
@@ -97,17 +110,28 @@ def initialize_game(
     game_config: t.Dict[str, t.Any],
     verbose: bool=False
 ) -> MarginGame:
-    players = game_config['players']
+    # players = game_config['players']
+    players = {
+        player_id: Player.from_dict(player_config)
+        for player_id, player_config in game_config['players'].items()
+    }
     if verbose: 
-        print("\nInitialized players:")
+        print(color("\nInitialized players:", color='green'))
         for player_id, player in players.items():
-            print(player)
+            print(f"`{color(player.name, color='magenta')}` (player_id: {player_id})")
         
-    fields = game_config['fields']
+    # fields = game_config['fields']
+    fields = {
+        field_id: eval(field_config)
+        for field_id, field_config in game_config['fields'].items()
+    }
     if verbose: 
-        print("\nInitialized fields:")
+        print(color("\nInitialized fields:", color='green'))
         for field_id, field in fields.items():
-            print(field)
+            print(f"{color(field.name, color='magenta')} (field_id: {field_id})")
+            print(field.description, end='\n')
+    
+    print(f"\nfor this game we have {color(game_config['n_iterations'], color='yellow')} iterations")
     
     game = game_class(
         players=players,
@@ -119,18 +143,17 @@ def initialize_game(
 def print_players_last_actions(players: Players) -> None:
     print('\nPlayers last actions:')
     for player_id, player in players.items():
-        print(f"\tplayer_id: {player_id} action: {player.get_last_action()}")
-        # print(player.get_last_action())
+        print(f"\t`{color(player.name, color='magenta')}` (player_id: {player_id}): {player.get_last_action()}")
         
 def print_players_money(players: Players) -> None:
-    print('\nPlayers money:')
+    print(color('\nPlayers money:', color='yellow'))
     for player_id, player in players.items():
-        print(f"\tplayer_id: {player_id} money: {player.money}")
+        print(f"\t`{color(player.name, color='magenta')}` (player_id: {player_id}): {player.money}")
         
 if __name__ == '__main__':
     
-    # game_config = read_game_config()
-    game_config = GAME_CONFIG
+    game_config = read_game_config()
+    # game_config = GAME_CONFIG
     print("\nGame config:")
     pprint(game_config)
     
