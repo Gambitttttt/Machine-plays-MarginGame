@@ -5,7 +5,6 @@ from math import inf
 from enum import Enum
 import typing as t
 
-# from configs.game_config import GAME_CONFIG
 
 from src.actions import Action
 # from src.players import Player
