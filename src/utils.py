@@ -10,8 +10,8 @@ import typing as t
 from src.actions import Action
 # from src.players import Player
 
-def read_game_config() -> t.Dict[str, t.Any]:
-    return json.load(open(pjoin(os.environ['PYTHONPATH'], 'configs/game_config.json'), mode='r', encoding='utf-8'))
+def read_game_config(config_path: str) -> t.Dict[str, t.Any]:
+    return json.load(open(config_path, mode='r', encoding='utf-8'))
 
 class ReadActionType(Enum):
     simple = 'simple'

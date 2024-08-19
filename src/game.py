@@ -2,6 +2,7 @@ import json
 from pprint import pprint
 import typing as t
 from dataclasses import Field, dataclass
+import argparse
 
 try:
     from fabulous import color as fb_color
@@ -35,8 +36,15 @@ from src.constants import (
     PlayersRevenues
 )
 
-from configs.game_config import GAME_CONFIG
-
+def parse_args():
+    parser = argparse.ArgumentParser(description='A simple command-line argument parser')
+    parser.add_argument(
+        '--config_path', 
+        type=str, 
+        help='Path to the (json) config of the game'
+    )
+    args = parser.parse_args()
+    return args
 class MarginGame:
     def __init__(
         self, 
@@ -112,7 +120,7 @@ def initialize_game(
 ) -> MarginGame:
     # players = game_config['players']
     players = {
-        player_id: Player.from_dict(player_config)
+        int(player_id): Player.from_dict(player_config)
         for player_id, player_config in game_config['players'].items()
     }
     if verbose: 
@@ -122,7 +130,7 @@ def initialize_game(
         
     # fields = game_config['fields']
     fields = {
-        field_id: eval(field_config)
+        int(field_id): eval(field_config)
         for field_id, field_config in game_config['fields'].items()
     }
     if verbose: 
@@ -152,7 +160,8 @@ def print_players_money(players: Players) -> None:
         
 if __name__ == '__main__':
     
-    game_config = read_game_config()
+    args = parse_args()
+    game_config = read_game_config(config_path=args.config_path)
     # game_config = GAME_CONFIG
     print("\nGame config:")
     pprint(game_config)
