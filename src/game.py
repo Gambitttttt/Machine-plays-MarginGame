@@ -19,7 +19,8 @@ from src.fields import (
     Fields,
     SberBank,
     CryptoStartup,
-    Manufactory
+    Manufactory,
+    OilCompany
 )
 from src.players import (
     Player
@@ -65,10 +66,9 @@ class MarginGame:
     
     def _return_players_revenues(self) -> PlayersRevenues:
         players_revenues = {}
-        last_actions = self._get_last_players_actions()
         for field_id, field in self.fields.items():
             current_players_revenues = field.return_revenues(
-                players_actions=last_actions
+                players=self.players
             )
             for player_id, revenue in current_players_revenues.items():
                 if player_id not in players_revenues:
@@ -101,7 +101,7 @@ class MarginGame:
         print_players_money(players=self.players)
         winners, top_money = self.define_winner()
         winners_str = ", ".join(f"{color(self.players[winner_id].name, color='magenta')} (player_id: {winner_id})" for winner_id in winners)
-        print(f'Winner(s): {winners_str} (money: {top_money})')
+        print(f'\nWinner(s): {winners_str} (money: {top_money})')
         
         
     def run_game(self) -> t.Dict[int, float]:
@@ -164,8 +164,8 @@ if __name__ == '__main__':
     args = parse_args()
     game_config = read_game_config(config_path=args.config_path)
     # game_config = GAME_CONFIG
-    print("\nGame config:")
-    pprint(game_config)
+    # print("\nGame config:")
+    # pprint(game_config)
     
     game = initialize_game(game_class=MarginGame, game_config=game_config, verbose=True)
     print('\n' + '='*100)
