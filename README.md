@@ -1,2 +1,2 @@
 # Machine-plays-MarginGame
-Machine learns to play MarginGame
+Machine learns to play MarginGame!
