@@ -1,6 +1,6 @@
 import typing as t
-from src.actions import Action
-from src.players import Player
+from actions import Action
+from players import Player
 
 PLAYER_ID = int
 FIELD_ID = int

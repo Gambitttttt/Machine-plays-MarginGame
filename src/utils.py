@@ -6,7 +6,7 @@ from enum import Enum
 import typing as t
 
 
-from src.actions import Action
+from actions import Action
 # from src.players import Player
 
 def read_game_config(config_path: str) -> t.Dict[str, t.Any]:
