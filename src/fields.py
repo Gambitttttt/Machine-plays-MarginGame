@@ -14,8 +14,8 @@ except ImportError as e:
     print("Exception raised trying to import fabulous!")
     print(e, end='\n'*2)
 
-from src.actions import Action
-from src.constants import (
+from actions import Action
+from constants import (
     Players,
     PlayersActions,
     PlayersRevenues,
@@ -141,13 +141,11 @@ class Manufactory(Field):
             if action.field_id == self.id:
                 players_revenues[player_id] = round(action.money_invested * resulting_multiplier, self.money_round_digits)
         return players_revenues
-    
-    
+
 @dataclass
 class OilCompany(Field):
     
     name: str='OilCompany'
-    total_players_threshold: int=2
     intercept: float=4.0
     slope: float=-1.0
     minimum_return_value: float=0.0
@@ -171,7 +169,7 @@ class OilCompany(Field):
             for player_id, player in players.items()
             if player.get_last_action().field_id == self.id
         ])
-        resulting_multiplier = max(0, self.slope * total_players + self.intercept)
+        resulting_multiplier = max(0.0, self.slope * total_players + self.intercept)
         players_revenues = {}
         for player_id, player in players.items():
             action = player.get_last_action()
@@ -181,17 +179,17 @@ class OilCompany(Field):
                     self.money_round_digits
                 )
         return players_revenues
-    
+
 @dataclass
 class Profit(Field):
 
     name: str = 'Profit'
-    lucky_outcome = 3.0
-    unlucky_outcome = 0.7
-    ok_outcome = 1.5
-    lucky_prob = 0.25
-    unlucky_prob = 0.25
-    ok_prob = 0.5
+    lucky_outcome: float = 3.0
+    unlucky_outcome: float = 0.7
+    ok_outcome: float = 1.5
+    lucky_prob: float = 0.25
+    unlucky_prob: float = 0.25
+    ok_prob: float = 0.5
 
     @property
     def description(self):
@@ -211,21 +209,21 @@ class Profit(Field):
     ) -> PlayersRevenues:
         players_revenues = {}
         outcome = random.choices([self.lucky_outcome, self.unlucky_outcome, self.ok_outcome], 
-                                 weights = [self.lucky_prob, self.unlucky_prob, self.ok_prob])
+                                 weights = [self.lucky_prob, self.unlucky_prob, self.ok_prob])[0]
         for player_id, player in players.items():
             action = player.get_last_action()
             if action.field_id == self.id:
-                players_revenues[player_id] = round(action.money_invested * outcome ,self.money_round_digits)
+                players_revenues[player_id] = round(action.money_invested * outcome, self.money_round_digits)
         return players_revenues
     
 @dataclass
 class New_Sector(Field):
 
     name: str = 'New Sector'
-    threshold_upper = 10
-    threshold_lower = 5
-    high_multiplier = 2.5
-    low_multiplier = 0.8
+    threshold_upper: int = 10
+    threshold_lower: int = 5
+    high_multiplier: float = 2.5
+    low_multiplier: float = 0.8
 
     @property
     def description(self):
@@ -235,7 +233,7 @@ class New_Sector(Field):
             {color('The revenue formula:', color='yellow')}
             revenue = (invested_money x {self.high_multiplier}) if the number of investors is 
             between {self.threshold_lower} and {self.threshold_upper} otherwise you get
-            (invested_money x {self.low_multiplier_multiplier})
+            (invested_money x {self.low_multiplier})
             """     
             )
     
@@ -250,7 +248,7 @@ class New_Sector(Field):
         ])
         resulting_multiplier = (
             self.high_multiplier if self.threshold_lower <= total_players <= self.threshold_upper
-            else self.low_multiplayer
+            else self.low_multiplier
         )
         players_revenues = {}
         for player_id, player in players.items():
@@ -258,3 +256,4 @@ class New_Sector(Field):
             if action.field_id == self.id:
                 players_revenues[player_id] = round(action.money_invested * resulting_multiplier, self.money_round_digits)
         return players_revenues
+
