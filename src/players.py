@@ -10,8 +10,8 @@ except ImportError as e:
     print("Exception raised trying to import fabulous!")
     print(e, end='\n'*2)
 
-from src.actions import Action
-from src.utils import read_action_from_keyboard
+from actions import Action
+from utils import read_action_from_keyboard
 
 
 @dataclass

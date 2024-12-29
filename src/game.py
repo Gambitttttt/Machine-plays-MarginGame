@@ -15,7 +15,7 @@ except ImportError as e:
     print("Exception raised trying to import fabulous!")
     print(e, end='\n'*2)
 
-from src.fields import (
+from fields import (
     Fields,
     SberBank,
     CryptoStartup,
@@ -24,15 +24,15 @@ from src.fields import (
     Profit,
     New_Sector
 )
-from src.players import (
+from players import (
     Player
 )
-from src.utils import (
+from utils import (
     read_game_config,
     ReadActionType,
     read_action_from_keyboard,
 )
-from src.constants import (
+from constants import (
     PLAYER_ID,
     Players,
     PlayersActions,
