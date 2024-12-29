@@ -94,10 +94,11 @@ class CryptoStartup(Field):
         players: Players,
     ) -> PlayersRevenues:
         players_revenues = {}
+        multiplier = self.multiplier if random.choices([0, 1], [1-self.success_probability, self.success_probability])[0] == 1 else 0
         for player_id, player in players.items():
             action = player.get_last_action()
             if action.field_id == self.id:
-                players_revenues[player_id] = round(action.money_invested * (self.multiplier if random.choices([0, 1], [1-self.success_probability, self.success_probability])[0] == 1 else 0), self.money_round_digits)
+                players_revenues[player_id] = round(action.money_invested * multiplier, self.money_round_digits)
         return players_revenues
 
     
@@ -179,4 +180,81 @@ class OilCompany(Field):
                     resulting_multiplier * action.money_invested, 
                     self.money_round_digits
                 )
+        return players_revenues
+    
+@dataclass
+class Profit(Field):
+
+    name: str = 'Profit'
+    lucky_outcome = 3.0
+    unlucky_outcome = 0.7
+    ok_outcome = 1.5
+    lucky_prob = 0.25
+    unlucky_prob = 0.25
+    ok_prob = 0.5
+
+    @property
+    def description(self):
+        return (
+            f"""
+            {self.name} is completely dependent on random
+            {color('The revenue formula:', color='yellow')}
+            revenue = (invested_money x {self.lucky_outcome}) with probability = {self.lucky_prob} or you get 
+            (invested_money x {self.unlucky_outcome}) with probability = {self.unlucky_prob} or you get
+            (invested_money x {self.ok_outcome}) with probability = {self.ok_prob}
+            """     
+            )
+    
+    def return_revenues(
+        self, 
+        players: Players,
+    ) -> PlayersRevenues:
+        players_revenues = {}
+        outcome = random.choices([self.lucky_outcome, self.unlucky_outcome, self.ok_outcome], 
+                                 weights = [self.lucky_prob, self.unlucky_prob, self.ok_prob])
+        for player_id, player in players.items():
+            action = player.get_last_action()
+            if action.field_id == self.id:
+                players_revenues[player_id] = round(action.money_invested * outcome ,self.money_round_digits)
+        return players_revenues
+    
+@dataclass
+class New_Sector(Field):
+
+    name: str = 'New Sector'
+    threshold_upper = 10
+    threshold_lower = 5
+    high_multiplier = 2.5
+    low_multiplier = 0.8
+
+    @property
+    def description(self):
+        return (
+            f"""
+            {self.name} is dependent on the total number of investors 
+            {color('The revenue formula:', color='yellow')}
+            revenue = (invested_money x {self.high_multiplier}) if the number of investors is 
+            between {self.threshold_lower} and {self.threshold_upper} otherwise you get
+            (invested_money x {self.low_multiplier_multiplier})
+            """     
+            )
+    
+    def return_revenues(
+        self, 
+        players: Players,
+    ) -> PlayersRevenues:
+        total_players = len([
+            player_id
+            for player_id, player in players.items()
+            if player.get_last_action().field_id == self.id
+        ])
+        resulting_multiplier = (
+            self.high_multiplier if self.threshold_lower <= total_players <= self.threshold_upper
+            else self.low_multiplayer
+        )
+        players_revenues = {}
+        for player_id, player in players.items():
+            action = player.get_last_action()
+            if action.field_id == self.id:
+                players_revenues[player_id] = round(action.money_invested * resulting_multiplier, self.money_round_digits)
         return players_revenues

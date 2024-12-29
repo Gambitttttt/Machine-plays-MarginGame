@@ -20,7 +20,9 @@ from src.fields import (
     SberBank,
     CryptoStartup,
     Manufactory,
-    OilCompany
+    OilCompany,
+    Profit,
+    New_Sector
 )
 from src.players import (
     Player
