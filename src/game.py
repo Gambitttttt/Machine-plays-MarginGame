@@ -3,6 +3,7 @@ from pprint import pprint
 import typing as t
 from dataclasses import Field, dataclass
 import argparse
+import pprint
 
 try:
     from fabulous import color as fb_color
@@ -34,9 +35,11 @@ from utils import (
 )
 from constants import (
     PLAYER_ID,
+    FIELD_ID,
     Players,
     PlayersActions,
-    PlayersRevenues
+    PlayersRevenues,
+    FieldsRates
 )
 
 def parse_args():
@@ -78,9 +81,15 @@ class MarginGame:
                 players_revenues[player_id] += revenue
         return players_revenues
     
+    def _return_fields_rates(self) -> FieldsRates:
+        fields_rates = {}
+        for field_id, field in self.fields.items():
+            fields_rates[field_id] = field.return_rate()
+        return fields_rates
+
     def request_for_actions(self):
         for player_id, player in self.players.items():
-            player.action()
+            player.random_action(num_options=len(self.fields)+1)
         
     def recompute_revenues(self):
         players_revenues = self._return_players_revenues()
@@ -107,14 +116,34 @@ class MarginGame:
         
         
     def run_game(self) -> t.Dict[int, float]:
+        self.init_states()
+        pp = pprint.PrettyPrinter(indent=4)
         for i in range(1, self.n_iterations+1):
             print(color(f"\nIteration {i}:", color='green', bold=True))
             self.request_for_actions()
             self.recompute_revenues()
+            last_actions = get_players_last_actions(players = self.players)
+            self.recompute_state(n_iteration = i, last_actions=last_actions)
             print_players_last_actions(players=self.players)
             print_players_money(players=self.players)
-
+            print()
+            pp.pprint(self.states)
         self.print_end_game_results()
+        #pp.pprint(self.states)
+
+    def init_states(self):
+        self.states = {}
+        for i in range(1, self.n_iterations + 1):
+            self.states[f'Round {i}'] = {}
+
+    def recompute_state(self, n_iteration, last_actions):
+        last_actions_num = [last_actions.count(i) for i in range(1, len(self.fields)+1)]
+        rates = self._return_fields_rates()
+        for j in range(1, len(self.fields)+1):
+            self.states[f'Round {n_iteration}'][f'Field {j}'] = {}
+            self.states[f'Round {n_iteration}'][f'Field {j}']['Number of players'] = last_actions_num[0]
+            last_actions_num.pop(0)
+            self.states[f'Round {n_iteration}'][f'Field {j}']['Revenue'] = rates[j]
 
 def initialize_game(
     game_class: MarginGame, 
@@ -149,8 +178,15 @@ def initialize_game(
         fields=fields,
         n_iterations=game_config['n_iterations'],
     )
-    return game 
-        
+
+    return game
+
+def get_players_last_actions(players: Players) -> list:
+    last_actions = []
+    for i in range(1, len(players)+1):
+        last_actions.append(players[i].history[-1].field_id)
+    return last_actions
+
 def print_players_last_actions(players: Players) -> None:
     print('\nPlayers last actions:')
     for player_id, player in players.items():
