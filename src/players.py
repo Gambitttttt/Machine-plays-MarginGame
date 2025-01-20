@@ -1,4 +1,6 @@
 import typing as t 
+import random
+from math import inf
 from dataclasses import dataclass
 from dataclasses import field 
 
@@ -39,3 +41,9 @@ class Player:
         self.history.append(action)
         return action
     
+    def random_action(self, num_options) -> Action:
+        field_num = random.choices([i for i in range(1, num_options)])[0]
+        action = Action(field_id=int(field_num), money_invested=float(inf))
+        action.money_invested = min(self.money, action.money_invested)
+        self.history.append(action)
+        return action

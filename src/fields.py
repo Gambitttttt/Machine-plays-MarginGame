@@ -19,7 +19,7 @@ from constants import (
     Players,
     PlayersActions,
     PlayersRevenues,
-    FIELD_ID,
+    FIELD_ID
 )
 
 @dataclass
@@ -32,7 +32,7 @@ class Field:
     
     
     @classmethod
-    def from_dict(cls, kwargs):
+    def from_dict(cls, kwargs): 
         return cls(**kwargs)
     
     def return_revenues(
@@ -40,7 +40,12 @@ class Field:
         players: Players,
     ) -> PlayersRevenues:
         ...
-        
+    
+    def return_rate(
+            self
+    ) -> float:
+        ...
+    
 Fields = t.Dict[FIELD_ID, Field]
 
 @dataclass
@@ -48,7 +53,8 @@ class SberBank(Field):
     
     name: str='SberBank'
     interest_rate: float=0.1
-    
+    outcome: float=0.0 
+
     @property
     def description(self):
         return (
@@ -65,11 +71,17 @@ class SberBank(Field):
         players: Players,
     ) -> PlayersRevenues:
         players_revenues = {}
+        self.outcome = self.interest_rate
         for player_id, player in players.items():
             action = player.get_last_action()
             if action.field_id == self.id:
                 players_revenues[player_id] = round(action.money_invested * (1+self.interest_rate), self.money_round_digits)
         return players_revenues
+    
+    def return_rate(
+        self
+    ) -> float:
+        return self.outcome
         
 @dataclass
 class CryptoStartup(Field):
@@ -77,6 +89,7 @@ class CryptoStartup(Field):
     name: str='CryptoStartup'
     success_probability: float=0.16
     multiplier: float=3.5
+    oucome: float=0.0
     
     @property
     def description(self):
@@ -95,13 +108,18 @@ class CryptoStartup(Field):
     ) -> PlayersRevenues:
         players_revenues = {}
         multiplier = self.multiplier if random.choices([0, 1], [1-self.success_probability, self.success_probability])[0] == 1 else 0
+        self.outcome = multiplier
         for player_id, player in players.items():
             action = player.get_last_action()
             if action.field_id == self.id:
                 players_revenues[player_id] = round(action.money_invested * multiplier, self.money_round_digits)
         return players_revenues
 
-    
+    def return_rate(
+        self
+    ) -> float:
+        return self.outcome
+
 @dataclass
 class Manufactory(Field):
     
@@ -109,6 +127,7 @@ class Manufactory(Field):
     total_players_threshold: int=2
     high_multiplier: float=2.1
     low_multiplayer: float=0.1
+    outcome: float=0.0
     
     @property
     def description(self):
@@ -135,12 +154,18 @@ class Manufactory(Field):
             self.high_multiplier if total_players <= self.total_players_threshold
             else self.low_multiplayer
         )
+        self.outcome = resulting_multiplier
         players_revenues = {}
         for player_id, player in players.items():
             action = player.get_last_action()
             if action.field_id == self.id:
                 players_revenues[player_id] = round(action.money_invested * resulting_multiplier, self.money_round_digits)
         return players_revenues
+    
+    def return_rate(
+        self
+    ) -> float:
+        return self.outcome
 
 @dataclass
 class OilCompany(Field):
@@ -149,7 +174,8 @@ class OilCompany(Field):
     intercept: float=4.0
     slope: float=-1.0
     minimum_return_value: float=0.0
-    
+    outcome: float=0.0
+
     @property
     def description(self):
         return (
@@ -170,6 +196,7 @@ class OilCompany(Field):
             if player.get_last_action().field_id == self.id
         ])
         resulting_multiplier = max(0.0, self.slope * total_players + self.intercept)
+        self.outcome = resulting_multiplier
         players_revenues = {}
         for player_id, player in players.items():
             action = player.get_last_action()
@@ -179,17 +206,23 @@ class OilCompany(Field):
                     self.money_round_digits
                 )
         return players_revenues
+    
+    def return_rate(
+        self
+    ) -> float:
+        return self.outcome
 
 @dataclass
 class Profit(Field):
 
     name: str = 'Profit'
-    lucky_outcome: float = 3.0
-    unlucky_outcome: float = 0.7
-    ok_outcome: float = 1.5
-    lucky_prob: float = 0.25
-    unlucky_prob: float = 0.25
-    ok_prob: float = 0.5
+    lucky_outcome: float=3.0
+    unlucky_outcome: float=0.7
+    ok_outcome: float=1.5
+    lucky_prob: float=0.25
+    unlucky_prob: float=0.25
+    ok_prob: float=0.5
+    outcome: float=0.0
 
     @property
     def description(self):
@@ -208,22 +241,29 @@ class Profit(Field):
         players: Players,
     ) -> PlayersRevenues:
         players_revenues = {}
-        outcome = random.choices([self.lucky_outcome, self.unlucky_outcome, self.ok_outcome], 
+        resulting_multiplier = random.choices([self.lucky_outcome, self.unlucky_outcome, self.ok_outcome], 
                                  weights = [self.lucky_prob, self.unlucky_prob, self.ok_prob])[0]
+        self.outcome = resulting_multiplier
         for player_id, player in players.items():
             action = player.get_last_action()
             if action.field_id == self.id:
-                players_revenues[player_id] = round(action.money_invested * outcome, self.money_round_digits)
+                players_revenues[player_id] = round(action.money_invested * resulting_multiplier, self.money_round_digits)
         return players_revenues
+    
+    def return_rate(
+        self
+    ) -> float:
+        return self.outcome
     
 @dataclass
 class New_Sector(Field):
 
     name: str = 'New Sector'
-    threshold_upper: int = 10
-    threshold_lower: int = 5
-    high_multiplier: float = 2.5
-    low_multiplier: float = 0.8
+    threshold_upper: int=10
+    threshold_lower: int=5
+    high_multiplier: float=2.5
+    low_multiplier: float=0.8
+    outcome: float=0.0
 
     @property
     def description(self):
@@ -250,6 +290,7 @@ class New_Sector(Field):
             self.high_multiplier if self.threshold_lower <= total_players <= self.threshold_upper
             else self.low_multiplier
         )
+        self.outcome = resulting_multiplier
         players_revenues = {}
         for player_id, player in players.items():
             action = player.get_last_action()
@@ -257,3 +298,7 @@ class New_Sector(Field):
                 players_revenues[player_id] = round(action.money_invested * resulting_multiplier, self.money_round_digits)
         return players_revenues
 
+    def return_rate(
+            self
+        ) -> float:
+            return self.outcome
