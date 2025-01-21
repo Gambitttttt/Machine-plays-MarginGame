@@ -21,6 +21,7 @@ class Player:
     name: str
     money: float=0
     action_type: str='all_money_to_field'
+    method_type: str='random'
     id: t.Optional[int]=None
     history: t.List[Action]=field(default_factory=list)
     
@@ -34,16 +35,13 @@ class Player:
     def get_last_action(self) -> Action:
         return self.history[-1]
     
-    def action(self) -> Action:
-        print(f"Action for player `{color(self.name, color='magenta')}` (player_id: {self.id}):")
-        action = read_action_from_keyboard(self.action_type)
-        action.money_invested = min(self.money, action.money_invested)
-        self.history.append(action)
-        return action
-    
-    def random_action(self, num_options) -> Action:
-        field_num = random.choices([i for i in range(1, num_options)])[0]
-        action = Action(field_id=int(field_num), money_invested=float(inf))
+    def action(self, num_options) -> Action:
+        if self.method_type == 'from_keyboard':
+            print(f"Action for player `{color(self.name, color='magenta')}` (player_id: {self.id}):")
+            action = read_action_from_keyboard(self.action_type)
+        elif self.method_type == 'random':
+            field_num = random.choices([i for i in range(1, num_options)])[0]
+            action = Action(field_id=int(field_num), money_invested=float(inf))
         action.money_invested = min(self.money, action.money_invested)
         self.history.append(action)
         return action
