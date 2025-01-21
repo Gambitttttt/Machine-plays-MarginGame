@@ -1,9 +1,8 @@
 import json 
-from pprint import pprint
+import pprint
 import typing as t
 from dataclasses import Field, dataclass
 import argparse
-import pprint
 
 try:
     from fabulous import color as fb_color
@@ -89,7 +88,7 @@ class MarginGame:
 
     def request_for_actions(self):
         for player_id, player in self.players.items():
-            player.random_action(num_options=len(self.fields)+1)
+            player.action(num_options=len(self.fields)+1)
         
     def recompute_revenues(self):
         players_revenues = self._return_players_revenues()
@@ -127,9 +126,9 @@ class MarginGame:
             print_players_last_actions(players=self.players)
             print_players_money(players=self.players)
             print()
-            pp.pprint(self.states)
+            #pp.pprint(self.states)
         self.print_end_game_results()
-        #pp.pprint(self.states)
+        pp.pprint(self.states)
 
     def init_states(self):
         self.states = {}
@@ -143,7 +142,7 @@ class MarginGame:
             self.states[f'Round {n_iteration}'][f'Field {j}'] = {}
             self.states[f'Round {n_iteration}'][f'Field {j}']['Number of players'] = last_actions_num[0]
             last_actions_num.pop(0)
-            self.states[f'Round {n_iteration}'][f'Field {j}']['Revenue'] = rates[j]
+            self.states[f'Round {n_iteration}'][f'Field {j}']['Return rate'] = rates[j]
 
 def initialize_game(
     game_class: MarginGame, 
@@ -172,11 +171,11 @@ def initialize_game(
             print(field.description, end='\n')
     
     print(f"\nfor this game we have {color(game_config['n_iterations'], color='yellow')} iterations")
-    
+
     game = game_class(
         players=players,
         fields=fields,
-        n_iterations=game_config['n_iterations'],
+        n_iterations=game_config['n_iterations']
     )
 
     return game

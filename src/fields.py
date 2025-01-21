@@ -215,7 +215,7 @@ class OilCompany(Field):
 @dataclass
 class Profit(Field):
 
-    name: str = 'Profit'
+    name: str='Profit'
     lucky_outcome: float=3.0
     unlucky_outcome: float=0.7
     ok_outcome: float=1.5
@@ -258,7 +258,7 @@ class Profit(Field):
 @dataclass
 class New_Sector(Field):
 
-    name: str = 'New Sector'
+    name: str='New Sector'
     threshold_upper: int=10
     threshold_lower: int=5
     high_multiplier: float=2.5
