@@ -129,6 +129,7 @@ class MarginGame:
             #pp.pprint(self.states)
         self.print_end_game_results()
         pp.pprint(self.states)
+        print(f'\nBasic metric for player 1: {get_players_money(players=self.players, id = 1)}')
 
     def init_states(self):
         self.states = {}
@@ -196,6 +197,11 @@ def print_players_money(players: Players) -> None:
     for player_id, player in players.items():
         print(f"\t`{color(player.name, color='magenta')}` (player_id: {player_id}): {player.money}")
         
+def get_players_money(players: Players, id) -> int:
+    for player_id, player in players.items():
+        if player_id == id:
+            return player.money
+
 if __name__ == '__main__':
     
     args = parse_args()
