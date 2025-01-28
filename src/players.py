@@ -20,10 +20,11 @@ from utils import read_action_from_keyboard
 class Player:
     name: str
     money: float=0
-    action_type: str='all_money_to_field'
-    method_type: str='random'
+    action_type: str='simple'
+    method_type: str='random_field'
     id: t.Optional[int]=None
     history: t.List[Action]=field(default_factory=list)
+    cash_history: t.List[float]=field(default_factory=list)
     
     @classmethod
     def from_dict(cls, kwargs):
@@ -35,13 +36,26 @@ class Player:
     def get_last_action(self) -> Action:
         return self.history[-1]
     
-    def action(self, num_options) -> Action:
+    def action(self, num_options, money_available) -> Action:
         if self.method_type == 'from_keyboard':
             print(f"Action for player `{color(self.name, color='magenta')}` (player_id: {self.id}):")
             action = read_action_from_keyboard(self.action_type)
-        elif self.method_type == 'random':
+        elif self.method_type == 'random_field':
             field_num = random.choices([i for i in range(1, num_options)])[0]
             action = Action(field_id=int(field_num), money_invested=float(inf))
+        elif self.method_type == 'random_field_and_investment':
+            field_num = random.choices([i for i in range(1, num_options)])[0]
+            investment = round(random.uniform(0.0, money_available), 1)
+            action = Action(field_id=int(field_num), money_invested=investment)
+        elif self.method_type == 'risk_averse_agent':
+            field_num = 1
+            action = Action(field_id=int(field_num), money_invested=float(inf))
+        elif self.method_type == 'risk_taking_agent':
+            field_num = 5
+            action = Action(field_id=int(field_num), money_invested=float(inf))
+
+
         action.money_invested = min(self.money, action.money_invested)
         self.history.append(action)
+        self.money -= action.money_invested
         return action
