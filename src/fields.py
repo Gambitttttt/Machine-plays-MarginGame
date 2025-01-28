@@ -71,7 +71,7 @@ class SberBank(Field):
         players: Players,
     ) -> PlayersRevenues:
         players_revenues = {}
-        self.outcome = self.interest_rate + 1
+        self.outcome = self.interest_rate
         for player_id, player in players.items():
             action = player.get_last_action()
             if action.field_id == self.id:
@@ -87,8 +87,8 @@ class SberBank(Field):
 class CryptoStartup(Field):
     
     name: str='CryptoStartup'
-    success_probability: float=0.1
-    multiplier: float=5.5
+    success_probability: float=0.16
+    multiplier: float=3.5
     oucome: float=0.0
     
     @property
@@ -126,7 +126,7 @@ class Manufactory(Field):
     name: str='Manufactory'
     total_players_threshold: int=2
     high_multiplier: float=2.1
-    low_multiplayer: float=0.2
+    low_multiplayer: float=0.1
     outcome: float=0.0
     
     @property

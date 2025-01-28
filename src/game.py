@@ -41,11 +41,6 @@ from constants import (
     FieldsRates
 )
 
-from metrics import(
-    basic_metric,
-    discounted_metric
-)
-
 def parse_args():
     parser = argparse.ArgumentParser(description='A simple command-line argument parser')
     parser.add_argument(
@@ -93,13 +88,12 @@ class MarginGame:
 
     def request_for_actions(self):
         for player_id, player in self.players.items():
-            player.action(num_options=len(self.fields)+1, money_available=player.money)
+            player.action(num_options=len(self.fields)+1)
         
     def recompute_revenues(self):
         players_revenues = self._return_players_revenues()
         for player_id, revenue in players_revenues.items():
-            self.players[player_id].money += revenue
-            self.players[player_id].cash_history.append(self.players[player_id].money)
+            self.players[player_id].money = revenue
             
     def define_winner(self) -> (t.List[PLAYER_ID], float):
         winner_ids_and_money = [
@@ -134,10 +128,8 @@ class MarginGame:
             print()
             #pp.pprint(self.states)
         self.print_end_game_results()
-        print()
         pp.pprint(self.states)
-        print(f'\nBasic metric for player 1: {basic_metric(dict=self.players, id = 1)}')
-        print(f'\nDiscounted metric for player 1: {discounted_metric(dict=self.players, id = 1)}')
+        print(f'\nBasic metric for player 1: {get_players_money(players=self.players, id = 1)}')
 
     def init_states(self):
         self.states = {}
@@ -205,6 +197,11 @@ def print_players_money(players: Players) -> None:
     for player_id, player in players.items():
         print(f"\t`{color(player.name, color='magenta')}` (player_id: {player_id}): {player.money}")
         
+def get_players_money(players: Players, id) -> int:
+    for player_id, player in players.items():
+        if player_id == id:
+            return player.money
+
 if __name__ == '__main__':
     
     args = parse_args()
