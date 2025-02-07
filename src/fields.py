@@ -124,7 +124,7 @@ class CryptoStartup(Field):
 class Manufactory(Field):
     
     name: str='Manufactory'
-    total_players_threshold: int=2
+    total_players_threshold: int=4
     high_multiplier: float=2.1
     low_multiplayer: float=0.2
     outcome: float=0.0
@@ -171,7 +171,7 @@ class Manufactory(Field):
 class OilCompany(Field):
     
     name: str='OilCompany'
-    intercept: float=4.0
+    intercept: float=5.0
     slope: float=-1.0
     minimum_return_value: float=0.0
     outcome: float=0.0
@@ -259,8 +259,8 @@ class Profit(Field):
 class New_Sector(Field):
 
     name: str='New Sector'
-    threshold_upper: int=10
-    threshold_lower: int=5
+    threshold_upper: int=6
+    threshold_lower: int=4
     high_multiplier: float=2.5
     low_multiplier: float=0.8
     outcome: float=0.0
