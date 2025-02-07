@@ -3,6 +3,9 @@ import pprint
 import typing as t
 from dataclasses import Field, dataclass
 import argparse
+import matplotlib.pyplot as plt
+import numpy as np
+import time
 
 try:
     from fabulous import color as fb_color
@@ -43,7 +46,16 @@ from constants import (
 
 from metrics import(
     basic_metric,
-    discounted_metric
+    discounted_metric,
+    wins_metric,
+    top3_metric,
+    mean_rounds_domination
+)
+
+from visualizer import(
+    one_agent,
+    agents_comparison,
+    bar_stats
 )
 
 def parse_args():
@@ -102,22 +114,45 @@ class MarginGame:
             self.players[player_id].cash_history.append(self.players[player_id].money)
             
     def define_winner(self) -> (t.List[PLAYER_ID], float):
-        winner_ids_and_money = [
-            (player_id, player.money)
+        winner_money = [
+            player.money
             for player_id, player in self.players.items()
         ]
-        winner_ids_and_money = sorted(winner_ids_and_money, key=lambda x: x[1], reverse=True)
-        top_money = winner_ids_and_money[0][1]
+        top_money = max(winner_money)
+        unq_money = sorted(set(winner_money), reverse=True)
+        top3_money = [unq_money[0], unq_money[1], unq_money[2]]
         winner_ids = [player_id for player_id, player in self.players.items() if player.money == top_money]
+        for winner_id in winner_ids:
+            self.players[winner_id].wins += 1
+        for player_id, player in self.players.items():
+            if player.money in top3_money:
+                self.players[player_id].top3 += 1
         return winner_ids, top_money
-            
+    
+    def define_domination(self, iteration,  end_iteration) -> None:
+        winner_money = []
+        if iteration == 1:
+            for player_id, player in self.players.items():
+                self.players[player_id].leading_role = 0
+        winner_money = [
+            player.money
+            for player_id, player in self.players.items()
+        ]
+        top_money = max(winner_money)
+        for player_id, player in self.players.items():
+            if player.money == top_money:
+                self.players[player_id].leading_role += 1
+        if iteration == end_iteration:
+            for player_id, player in self.players.items():
+                self.players[player_id].domination_rounds.append(self.players[player_id].leading_role)
+
             
     def print_end_game_results(self):
         print("\n" + '='*50 + 'Final results' + '='*50 + '\n')
         print_players_money(players=self.players)
         winners, top_money = self.define_winner()
         winners_str = ", ".join(f"{color(self.players[winner_id].name, color='magenta')} (player_id: {winner_id})" for winner_id in winners)
-        print(f'\nWinner(s): {winners_str} (money: {top_money})')
+        print(f'\nWinner(s): {winners_str} (money: {round(top_money,3)})')
         
         
     def run_game(self) -> t.Dict[int, float]:
@@ -136,8 +171,61 @@ class MarginGame:
         self.print_end_game_results()
         pp.pprint(self.states)
         print()
-        print(f'\nBasic metric for player 1: {basic_metric(dict=self.players, id = 1)}')
-        print(f'\nDiscounted metric for player 1: {discounted_metric(dict=self.players, id = 1, discount=0.5)}')
+        print(f'\nBasic metric for player 1: {basic_metric(dict=self.players, id = '1')}')
+        print(f'\nDiscounted metric for player 1: {discounted_metric(dict=self.players, id = '1', discount=0.5)}')
+
+    def run_multiple_games(self, n_games) -> None:
+        start_time = time.time()
+        print(f'There will be {n_games} games played this time')
+        print()
+        basic_metric_statistics = {'1': [],
+                                   '2': [],
+                                   '3': [],
+                                   '4': [],
+                                   '5': [],
+                                   '6': [],
+                                   '7': [],
+                                   '8': []}
+        discounted_metric_statistics = {'1': [],
+                                        '2': [],
+                                        '3': [],
+                                        '4': [],
+                                        '5': [],
+                                        '6': [],
+                                        '7': [],
+                                        '8': []}
+        for j in range(1, n_games+1):
+            for player_id, player in self.players.items():
+                self.players[player_id].money = 10
+            self.init_states()
+            for i in range(1, self.n_iterations+1):
+                self.request_for_actions()
+                self.recompute_revenues()
+                last_actions = get_players_last_actions(players = self.players)
+                self.recompute_state(n_iteration = i, last_actions=last_actions)
+                self.define_domination(iteration = i, end_iteration=self.n_iterations)
+            for player_id, player in self.players.items():
+                basic_metric_statistics[str(player_id)].append(basic_metric(dict=self.players, id = player_id))
+                discounted_metric_statistics[str(player_id)].append(discounted_metric(dict=self.players, id = player_id, discount=0.5)) 
+            winners, top_money = self.define_winner()
+        
+        end_time = time.time()
+        print('Time to complete the program:', end_time - start_time, '\n')
+        players_wins = []
+        players_top3 = []
+        players_round_domination = []
+        self.fill_stats_list(stats_list=players_wins, metric=wins_metric, scaling_parameter=n_games)
+        self.fill_stats_list(stats_list=players_top3, metric=top3_metric, scaling_parameter=n_games)
+        self.fill_stats_list(stats_list=players_round_domination, metric=mean_rounds_domination, scaling_parameter=self.n_iterations)
+        
+        bar_stats(n_players=8, stats=players_wins, stats_name='Players wins percentage')
+        bar_stats(n_players=8, stats=players_top3, stats_name='Players top 3 percentage')
+        bar_stats(n_players=8, stats=players_round_domination, stats_name='Players round domination percentage')
+
+        agents_comparison(dict_stats=basic_metric_statistics, xlim=500, n_players=8, metric_type='Basic')
+        agents_comparison(dict_stats=discounted_metric_statistics, xlim=500, n_players=8, metric_type='Discounted')
+        
+        one_agent(dict_basic_stats=basic_metric_statistics, dict_discounted_stats=discounted_metric_statistics, player_id=1)
 
     def init_states(self):
         self.states = {}
@@ -152,6 +240,19 @@ class MarginGame:
             self.states[f'Round {n_iteration}'][f'Field {j}']['Number of players'] = last_actions_num[0]
             last_actions_num.pop(0)
             self.states[f'Round {n_iteration}'][f'Field {j}']['Return rate'] = rates[j]
+
+    def fill_stats_list(self, stats_list, metric, scaling_parameter):
+        if metric == wins_metric:
+            text = ['won', 'times or', "% of games"] 
+        elif metric == top3_metric:
+            text = ['got in top 3', 'times or', "% of games"]
+        elif metric == mean_rounds_domination:
+            text = ['dominated on average in', 'rounds or', "% of games"]
+        for  player_id, player in self.players.items():
+            player_stat = metric(dict=self.players, id=player_id)
+            stats_list.append(round(player_stat / scaling_parameter * 100,2))
+            print(f'Player {player_id} {text[0]} {player_stat} {text[1]} {stats_list[-1]} {text[2]}')
+        print() 
 
 def initialize_game(
     game_class: MarginGame, 
@@ -203,7 +304,7 @@ def print_players_last_actions(players: Players) -> None:
 def print_players_money(players: Players) -> None:
     print(color('\nPlayers money:', color='yellow'))
     for player_id, player in players.items():
-        print(f"\t`{color(player.name, color='magenta')}` (player_id: {player_id}): {player.money}")
+        print(f"\t`{color(player.name, color='magenta')}` (player_id: {player_id}): {round(player.money,3)}")
         
 if __name__ == '__main__':
     
@@ -212,15 +313,13 @@ if __name__ == '__main__':
     # game_config = GAME_CONFIG
     # print("\nGame config:")
     # pprint(game_config)
-    
+    n_games = 1000
+
     game = initialize_game(game_class=MarginGame, game_config=game_config, verbose=True)
     print('\n' + '='*100)
 
-    print(f'\nRunning game (total iterations: {game.n_iterations})...')
-    game.run_game()    
-    
-    
-    
-    
-
-    
+    if n_games == 1:
+        print(f'\nRunning game (total iterations: {game.n_iterations})...')
+        game.run_game()
+    else:
+        game.run_multiple_games(n_games = n_games)
