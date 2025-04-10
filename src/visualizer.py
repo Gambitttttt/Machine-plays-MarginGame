@@ -42,3 +42,43 @@ def bar_stats(n_players, stats, stats_name):
     ax.bar(players, stats)
     ax.set_ylabel(stats_name)
     plt.show()
+
+def bar_stats_reduced(exp_type, names, stats, ids, stats_name, n_metrics=3):
+    players = names
+    for i in range(n_metrics):
+        stats_reduced = []
+        for id in ids:
+            stats_reduced.append(stats[i][id-1])
+        fig, ax = plt.subplots()
+        ax.bar(players, stats_reduced)
+        ax.set_ylabel(stats_name[i])
+        title = exp_type + ' ' + stats_name[i]
+        ax.set_title(title)
+        path = 'C:/Users/WS user/MarginGame/MarginGame2/MarginGame/Graphs/'
+        plt.savefig(path + title + '.png')
+
+def agents_comparison_reduced(exp_type, names, ids, dict_stats, xlim, metric_types, n_distributions=2):
+    for j in range(n_distributions):
+        fig, ax = plt.subplots(1, len(ids))
+        for k in range(len(ids)):
+            ax[k].hist(np.array(dict_stats[j][str(ids[k])]), bins = 20, range=(0,xlim), density=True)
+            ax[k].set_title(names[k] + ' ' + metric_types[j])
+        path = 'C:/Users/WS user/MarginGame/MarginGame2/MarginGame/Graphs/'
+        title = exp_type + ' ' + metric_types[j] + '.png'
+        plt.savefig(path+title)
+
+def agents_comparison_uni(exp_type, names, ids, dict_stats, xlim, metric_types, n_distributions=2):
+    for j in range(n_distributions):
+        fig, ax = plt.subplots()
+        for k in range(len(ids)):
+            plt.hist(np.array(dict_stats[j][str(ids[k])]), bins = 50, range=(0,xlim), density=True, label = names[k], alpha = 0.5)
+            #sns.distplot(np.array(dict_stats[j][str(ids[k])]), bins = 25, range=(0,xlim), density=True, label = names[k], hist_kws={"alpha": 0.5})
+        plt.legend(names)
+        path = 'C:/Users/WS user/MarginGame/MarginGame2/MarginGame/Graphs/'
+        title = exp_type + ' ' + metric_types[j] + '.png'
+        plt.savefig(path+title)
+
+def full_vis(exp_type, names, ids, stats, dict_stats, xlim, stats_name, metric_types, 
+             bar_func = bar_stats_reduced, compare_func = agents_comparison_uni):
+    bar_func(exp_type, names, stats, ids, stats_name, n_metrics=3)
+    compare_func(exp_type, names, ids, dict_stats, xlim, metric_types, n_distributions=2)

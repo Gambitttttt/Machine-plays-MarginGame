@@ -4,6 +4,7 @@ import json
 from math import inf
 from enum import Enum
 import typing as t
+import random
 
 
 from actions import Action
@@ -46,3 +47,8 @@ def read_action_from_keyboard(
     else:
         raise NotImplementedError
     
+def init_memory(): # можно попробовать 2 реализации: случайная инициализация из интервала 0,1 и случайная инициализация исходов полей
+    # memory = [random.random() for i in range(6)]
+    # memory[1] = 0
+    memory = [1.1, 0, random.choice([2.1, 0.2]), random.choice([0.0, 1.0, 2.0, 3.0, 4.0]), random.choice([0.7, 1.5, 3.0]), random.choice([2.5, 0.8])]
+    return memory
