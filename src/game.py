@@ -216,6 +216,7 @@ class MarginGame:
         done=0
         self.init_states()
         for player_id, player in self.players.items():
+                self.players[player_id].money = 10
                 self.players[player_id].memory = init_memory()
         for i in range(1, self.n_iterations+1):
             old_state = self.return_total_state(turn = i-1, turns_total=self.n_iterations)
@@ -248,6 +249,7 @@ class MarginGame:
         done=0
         self.init_states()
         for player_id, player in self.players.items():
+                self.players[player_id].money = 10
                 self.players[player_id].memory = init_memory()
         for i in range(1, self.n_iterations+1):
             old_state = self.return_total_state(turn = i-1, turns_total=self.n_iterations)
@@ -390,36 +392,40 @@ class MarginGame:
             # total_state = [1/turns_total, 0, 0, 0, 0, 0, 0]
             # total_state = [0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0]
             # total_state = [0, 0, 0, 0, 0, 0, 0]
-            total_state = [0, 0, 0, 0]
+            # total_state = [0, 0, 0, 0]
+            total_state = [0, 0, 0, 0, 1, 1, 1, 0, 0, 0]
         else:
             total_state = [turn/turns_total]
-            aggregated_state = [0, 0, 0, 0, 0, 0]
+            aggregated_state = [0, 0, 0]
             prev_turn_state = self.states[turn]
             for item in prev_turn_state.keys():
-                # if item != 'Top3 money':
                 if not item in ['Top3 money', 'Field 1', 'Field 2', 'Field 5']: 
                     total_state.append(prev_turn_state[item]['Number of players']/len(self.players.keys()))
-            # for idx in range(1, turn+1):
-            #     turn_state = self.states[idx]
-            #     for item in turn_state.keys():
-            #         if item != 'Top3 money':
-            #             num = int(item[-1])-1
-            #             aggregated_state[num] += turn_state[item]['Number of players']/len(self.players.keys())
-            # aggregated_state = np.array(aggregated_state)
-            # aggregated_state = aggregated_state / turn
-            # top3_money = prev_turn_state['Top3 money']
-            # player1_money_lead = []
-            # for i in range(len(top3_money)):
-            #     if self.players[1].money == 0 and top3_money[i] == 0:
-            #         player1_money_lead.append(1)
-            #     elif top3_money[i] == 0:
-            #         player1_money_lead.append(100)
-            #     elif self.players[1].money / top3_money[i] > 100:
-            #         player1_money_lead.append(100)
-            #     else:
-            #         player1_money_lead.append(self.players[1].money / top3_money[i])
-            # total_state.extend(player1_money_lead)
-            # total_state.extend(aggregated_state
+            for idx in range(1, turn+1):
+                turn_state = self.states[idx]
+                for item in turn_state.keys():
+                    if not item in ['Top3 money', 'Field 1', 'Field 2', 'Field 5']:
+                        if item == 'Field 3':
+                            aggregated_state[0] += turn_state[item]['Number of players']/len(self.players.keys())
+                        elif item == 'Field 4':
+                            aggregated_state[1] += turn_state[item]['Number of players']/len(self.players.keys())
+                        elif item == 'Field 6':
+                            aggregated_state[2] += turn_state[item]['Number of players']/len(self.players.keys())
+            aggregated_state = np.array(aggregated_state)
+            aggregated_state = aggregated_state / turn
+            top3_money = prev_turn_state['Top3 money']
+            player1_money_lead = []
+            for i in range(len(top3_money)):
+                if self.players[1].money == 0 and top3_money[i] == 0:
+                    player1_money_lead.append(1)
+                elif top3_money[i] == 0:
+                    player1_money_lead.append(100)
+                elif self.players[1].money / top3_money[i] > 100:
+                    player1_money_lead.append(100)
+                else:
+                    player1_money_lead.append(self.players[1].money / top3_money[i])
+            total_state.extend(player1_money_lead)
+            total_state.extend(aggregated_state)
         return list(np.array(total_state, dtype = float))
     
     def train_long_memory(self, batch_size, trainer):
@@ -617,14 +623,14 @@ def train_with_DQN(self_play):
     if not self_play:
         n_games=1
         while True:
-            game = initialize_game(game_class=MarginGame, game_config=game_config, verbose=True, classes='original')
+            game = initialize_game(game_class=MarginGame, game_config=game_config, verbose=True, classes='original', method='DQN')
             game.run_training_games_DQN(batch_size=BATCH_SIZE, epsilon=EPSILON, decay=DECAY, n_games=n_games, trainer=DQN_trainer, model=model, trained_models=[])
 
             score=basic_metric(dict=game.players, id = 1)
             
             if score > top_score:
                     top_score = score
-                    model.save(file_name='DQN', additional_text='top_mid-train')
+                    model.save(file_name='DQN_top_mid-train.pth')
 
             print('Game', n_games, 'Score', score, 'Top score:', top_score)
 
@@ -634,36 +640,32 @@ def train_with_DQN(self_play):
             plot_mean_scores.append(mean_score)
             plot(plot_scores, plot_mean_scores)
             if n_games % 10000 == 0:
-                model.save(num=n_games)
+                model.save(file_name=f'DQN_{n_games}_mid-train.pth')
             n_games+=1
     else:
         SAVE_STEPS=10000
-        POLICY_BUFFER_LEN=10
+        POLICY_BUFFER_LEN=15
         PLAY_VS_LATEST_POLICY_RATIO=0.5
         SWAP_STEPS=10000
-        policy_buffer = deque(maxlen=POLICY_BUFFER_LEN)
         model_folder = deque(maxlen=POLICY_BUFFER_LEN)
-
+        game = initialize_game(game_class=MarginGame, game_config=game_config, verbose=True, classes='original', method='DQN')
         n_games=1
         while True:
-
             if n_games % SAVE_STEPS == 0:
-                model.save(file_name='DQN', num=n_games, additional_text='mid-train')
-                policy_buffer.append(n_games)
+                name=f'DQN_{n_games}_self_play_mid-train.pth'
+                model.save(file_name=name)
                 additional_model = DQN()
-                name=f'DQN_model{n_games}mid-train.pth'
                 additional_model.load(file_name=name)
                 model_folder.append(additional_model)
                 # print(model_folder)
-                # print(policy_buffer)
 
-            if n_games < SWAP_STEPS:
-                game = initialize_game(game_class=MarginGame, game_config=game_config, verbose=True, classes='original')
-            else:
-                game = initialize_game(game_class=MarginGame, game_config=game_config, verbose=True, classes='trained')
+            # if n_games < SWAP_STEPS:
+            #     game = initialize_game(game_class=MarginGame, game_config=game_config, verbose=True, classes='original')
+            # else:
+            #     game = initialize_game(game_class=MarginGame, game_config=game_config, verbose=True, classes='trained')
             
             if n_games % SWAP_STEPS == 0:
-                if len(policy_buffer) == 1:
+                if len(model_folder) == 1:
                     models_samples = [model_folder[0]] * 7
                 else:
                     models_samples = []
@@ -674,7 +676,8 @@ def train_with_DQN(self_play):
                         else:
                             random_idx = random.choice(range(len(model_folder)-1))
                             models_samples.append(model_folder[random_idx])
-            if len(policy_buffer) == 0:
+                game = initialize_game(game_class=MarginGame, game_config=game_config, verbose=True, classes='trained', method='DQN')
+            if len(model_folder) == 0:
                 models_samples = []
 
             game.run_training_games_DQN(batch_size=BATCH_SIZE, epsilon=EPSILON, decay=DECAY, n_games=n_games % SAVE_STEPS, trainer=DQN_trainer, model=model, trained_models=models_samples)
@@ -682,7 +685,7 @@ def train_with_DQN(self_play):
             score=basic_metric(dict=game.players, id = 1)
             if score > top_score:
                     top_score = score
-                    model.save(file_name='DQN', additional_text='top_mid-train')
+                    model.save(file_name='DQN_top_mid-train.pth')
 
             print('Game', n_games, 'Score', score, 'Top score:', top_score)
 
@@ -691,8 +694,6 @@ def train_with_DQN(self_play):
             mean_score = total_score / n_games
             plot_mean_scores.append(mean_score)
             plot(plot_scores, plot_mean_scores)
-            # if n_games % 10000 == 0:
-            #     model.save(num=n_games)
             n_games+=1
 
 def train_with_Q_table(self_play):
@@ -739,29 +740,25 @@ def train_with_Q_table(self_play):
         POLICY_BUFFER_LEN=15
         PLAY_VS_LATEST_POLICY_RATIO=0.5
         SWAP_STEPS=10000
-        policy_buffer = deque(maxlen=POLICY_BUFFER_LEN)
         model_folder = deque(maxlen=POLICY_BUFFER_LEN)
-
+        game = initialize_game(game_class=MarginGame, game_config=game_config, verbose=True, classes='original', method='Q_table')
         n_games=1
         while True:
 
             if n_games % SAVE_STEPS == 0:
-                model.save(name=f'Q_table_mid-train_with_self_play_{n_games}.npy')
-                policy_buffer.append(n_games)
-                additional_model = Q_table(num_states=11000, num_actions=6)
                 name=f'Q_table_mid-train_with_self_play_{n_games}.npy'
+                model.save(name=name)
+                additional_model = Q_table(num_states=11000, num_actions=6)
                 additional_model.load(file_name=name)
                 model_folder.append(additional_model)
-                # print(model_folder)
-                # print(policy_buffer)
 
-            if n_games < SWAP_STEPS:
-                game = initialize_game(game_class=MarginGame, game_config=game_config, verbose=True, classes='original', method='Q_table')
-            else:
-                game = initialize_game(game_class=MarginGame, game_config=game_config, verbose=True, classes='trained', method='Q_table')
+            # if n_games < SWAP_STEPS:
+            #     game = initialize_game(game_class=MarginGame, game_config=game_config, verbose=True, classes='original', method='Q_table')
+            # else:
+            #     game = initialize_game(game_class=MarginGame, game_config=game_config, verbose=True, classes='trained', method='Q_table')
             
             if n_games % SWAP_STEPS == 0:
-                if len(policy_buffer) == 1:
+                if len(model_folder) == 1:
                     models_samples = [model_folder[0]] * 7
                 else:
                     models_samples = []
@@ -772,8 +769,8 @@ def train_with_Q_table(self_play):
                         else:
                             random_idx = random.choice(range(len(model_folder)-1))
                             models_samples.append(model_folder[random_idx])
-                # print(models_samples)
-            if len(policy_buffer) == 0:
+                game = initialize_game(game_class=MarginGame, game_config=game_config, verbose=True, classes='trained', method='Q_table')
+            if len(model_folder) == 0:
                 models_samples = []
 
             game.run_training_games_Q_table(epsilon=EPSILON, decay=DECAY, n_games=n_games % SWAP_STEPS, trainer=trainer_Q_table, model=model, trained_models=models_samples)
@@ -790,13 +787,11 @@ def train_with_Q_table(self_play):
             mean_score = total_score / n_games
             plot_mean_scores.append(mean_score)
             plot(plot_scores, plot_mean_scores)
-            # if n_games % 10000 == 0:
-            #     model.save(name=f'Q_table_with_self_play_{n_games}.npy')
             n_games+=1
 
 if __name__ == '__main__':
     # autonomous_game(n_games=100, epochs=50, classes='assessing_trained', model = Q_table(num_states=11000, num_actions=6), model_name='Q_table_top_with_self_play.npy', method='Q_table',
     #                 Q_table_models=['Q_table_mid-train_with_self_play_1000.npy', 'Q_table_mid-train_with_self_play_2000.npy', 'Q_table_top_with_self_play.npy'],
     #                 DQN_models=['model1000mid-train.pth', 'model2000mid-train.pth', 'modeltop_mid-train.pth'])
-    #train_with_DQN(self_play=True)
-    train_with_Q_table(self_play=True)
+    train_with_DQN(self_play=True)
+    #train_with_Q_table(self_play=True)
