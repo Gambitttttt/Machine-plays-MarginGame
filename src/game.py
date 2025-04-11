@@ -793,5 +793,5 @@ if __name__ == '__main__':
     # autonomous_game(n_games=100, epochs=50, classes='assessing_trained', model = Q_table(num_states=11000, num_actions=6), model_name='Q_table_top_with_self_play.npy', method='Q_table',
     #                 Q_table_models=['Q_table_mid-train_with_self_play_1000.npy', 'Q_table_mid-train_with_self_play_2000.npy', 'Q_table_top_with_self_play.npy'],
     #                 DQN_models=['model1000mid-train.pth', 'model2000mid-train.pth', 'modeltop_mid-train.pth'])
-    train_with_DQN(self_play=True)
-    #train_with_Q_table(self_play=True)
+    #train_with_DQN(self_play=True)
+    train_with_Q_table(self_play=True)
