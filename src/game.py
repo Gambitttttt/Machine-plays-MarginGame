@@ -624,7 +624,7 @@ def train_with_DQN(self_play):
             
             if score > top_score:
                     top_score = score
-                    model.save(additional_text='top_mid-train')
+                    model.save(file_name='DQN', additional_text='top_mid-train')
 
             print('Game', n_games, 'Score', score, 'Top score:', top_score)
 
@@ -633,14 +633,14 @@ def train_with_DQN(self_play):
             mean_score = total_score / n_games
             plot_mean_scores.append(mean_score)
             plot(plot_scores, plot_mean_scores)
-            if n_games % 5000 == 0:
+            if n_games % 10000 == 0:
                 model.save(num=n_games)
             n_games+=1
     else:
-        SAVE_STEPS=1000
+        SAVE_STEPS=10000
         POLICY_BUFFER_LEN=10
         PLAY_VS_LATEST_POLICY_RATIO=0.5
-        SWAP_STEPS=1000
+        SWAP_STEPS=10000
         policy_buffer = deque(maxlen=POLICY_BUFFER_LEN)
         model_folder = deque(maxlen=POLICY_BUFFER_LEN)
 
@@ -648,10 +648,10 @@ def train_with_DQN(self_play):
         while True:
 
             if n_games % SAVE_STEPS == 0:
-                model.save(num=n_games, additional_text='mid-train')
+                model.save(file_name='DQN', num=n_games, additional_text='mid-train')
                 policy_buffer.append(n_games)
                 additional_model = DQN()
-                name=f'model{n_games}mid-train.pth'
+                name=f'DQN_model{n_games}mid-train.pth'
                 additional_model.load(file_name=name)
                 model_folder.append(additional_model)
                 # print(model_folder)
@@ -677,12 +677,12 @@ def train_with_DQN(self_play):
             if len(policy_buffer) == 0:
                 models_samples = []
 
-            game.run_training_games_DQN(batch_size=BATCH_SIZE, epsilon=EPSILON, decay=DECAY, n_games=n_games, trainer=DQN_trainer, model=model, trained_models=models_samples)
+            game.run_training_games_DQN(batch_size=BATCH_SIZE, epsilon=EPSILON, decay=DECAY, n_games=n_games % SAVE_STEPS, trainer=DQN_trainer, model=model, trained_models=models_samples)
             
             score=basic_metric(dict=game.players, id = 1)
             if score > top_score:
                     top_score = score
-                    model.save(additional_text='top_mid-train')
+                    model.save(file_name='DQN', additional_text='top_mid-train')
 
             print('Game', n_games, 'Score', score, 'Top score:', top_score)
 
@@ -691,8 +691,8 @@ def train_with_DQN(self_play):
             mean_score = total_score / n_games
             plot_mean_scores.append(mean_score)
             plot(plot_scores, plot_mean_scores)
-            if n_games % 5000 == 0:
-                model.save(num=n_games)
+            # if n_games % 10000 == 0:
+            #     model.save(num=n_games)
             n_games+=1
 
 def train_with_Q_table(self_play):
@@ -731,14 +731,14 @@ def train_with_Q_table(self_play):
             mean_score = total_score / n_games
             plot_mean_scores.append(mean_score)
             plot(plot_scores, plot_mean_scores)
-            if n_games % 5000 == 0:
+            if n_games % 10000 == 0:
                 model.save(name=f'Q_table_without_self_play_{n_games}.npy')
             n_games+=1
     else:
-        SAVE_STEPS=1000
-        POLICY_BUFFER_LEN=10
+        SAVE_STEPS=10000
+        POLICY_BUFFER_LEN=15
         PLAY_VS_LATEST_POLICY_RATIO=0.5
-        SWAP_STEPS=1000
+        SWAP_STEPS=10000
         policy_buffer = deque(maxlen=POLICY_BUFFER_LEN)
         model_folder = deque(maxlen=POLICY_BUFFER_LEN)
 
@@ -776,7 +776,7 @@ def train_with_Q_table(self_play):
             if len(policy_buffer) == 0:
                 models_samples = []
 
-            game.run_training_games_Q_table(epsilon=EPSILON, decay=DECAY, n_games=n_games, trainer=trainer_Q_table, model=model, trained_models=models_samples)
+            game.run_training_games_Q_table(epsilon=EPSILON, decay=DECAY, n_games=n_games % SWAP_STEPS, trainer=trainer_Q_table, model=model, trained_models=models_samples)
             
             score=basic_metric(dict=game.players, id = 1)
             if score > top_score:
@@ -790,13 +790,13 @@ def train_with_Q_table(self_play):
             mean_score = total_score / n_games
             plot_mean_scores.append(mean_score)
             plot(plot_scores, plot_mean_scores)
-            if n_games % 5000 == 0:
-                model.save(name=f'Q_table_with_self_play_{n_games}.npy')
+            # if n_games % 10000 == 0:
+            #     model.save(name=f'Q_table_with_self_play_{n_games}.npy')
             n_games+=1
 
 if __name__ == '__main__':
-    autonomous_game(n_games=100, epochs=50, classes='assessing_trained', model = Q_table(num_states=11000, num_actions=6), model_name='Q_table_top_with_self_play.npy', method='Q_table',
-                    Q_table_models=['Q_table_mid-train_with_self_play_1000.npy', 'Q_table_mid-train_with_self_play_2000.npy', 'Q_table_top_with_self_play.npy'],
-                    DQN_models=['model1000mid-train.pth', 'model2000mid-train.pth', 'modeltop_mid-train.pth'])
+    # autonomous_game(n_games=100, epochs=50, classes='assessing_trained', model = Q_table(num_states=11000, num_actions=6), model_name='Q_table_top_with_self_play.npy', method='Q_table',
+    #                 Q_table_models=['Q_table_mid-train_with_self_play_1000.npy', 'Q_table_mid-train_with_self_play_2000.npy', 'Q_table_top_with_self_play.npy'],
+    #                 DQN_models=['model1000mid-train.pth', 'model2000mid-train.pth', 'modeltop_mid-train.pth'])
     #train_with_DQN(self_play=True)
-    #train_with_Q_table(self_play=True)
+    train_with_Q_table(self_play=True)
