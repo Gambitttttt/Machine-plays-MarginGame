@@ -7,7 +7,7 @@ import os
 class DQN(nn.Module):
     def __init__(self):
         super().__init__()
-        self.fc1 = nn.Linear(4, 512)
+        self.fc1 = nn.Linear(10, 512)
         self.fc2 = nn.Linear(512, 6)
     
     def forward(self, x):
@@ -15,16 +15,15 @@ class DQN(nn.Module):
         x = self.fc2(x)
         return x
     
-    def save(self, num='', additional_text='', file_name='model', ending='.pth'):
+    def save(self, file_name):
         model_folder_path = './src'
-        file_name=file_name+str(num)+additional_text+ending
         if not os.path.exists(model_folder_path):
             os.makedirs(model_folder_path)
 
         file_name = os.path.join(model_folder_path, file_name)
         torch.save(self.state_dict(), file_name)
 
-    def load(self, file_name = 'model5000.pth'):
+    def load(self, file_name):
         model_folder_path = './src'
         file_name = os.path.join(model_folder_path, file_name)
         self.load_state_dict(torch.load(file_name))
