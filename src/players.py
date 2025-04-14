@@ -58,26 +58,28 @@ class Player:
             action = read_action_from_keyboard(self.action_type)
         elif self.method_type == 'random':
             #field_num = random.choices([i for i in range(1, num_options)])[0]
-            field_num = random.choices([1, 3, 4, 5, 6])[0]
+            field_num = random.choice([1, 2, 3, 4, 5, 6])
             if self.action_type == 'random_field':
                 action = Action(field_id=int(field_num), money_invested=float(inf))
             elif self.action_type == 'random_field_and_investment':
                 investment = round(random.uniform(0.0, money_available), 1)
                 action = Action(field_id=int(field_num), money_invested=investment) 
         elif self.method_type == 'custom_all_in':
-            classes = ['sber_lover', 'manufacturer', 'oil_lover', 'gambler', 'cooperator']
+            classes = ['sber_lover', 'lottery_man', 'manufacturer', 'oil_lover', 'gambler', 'cooperator']
             if self.action_type in classes:
                 choices = [1, 2, 3, 4, 5, 6]
                 if self.action_type == 'sber_lover':
-                    field_num = random.choices(choices, weights=[0.6, 0.0, 0.1, 0.1, 0.1, 0.1])[0]
+                    field_num = random.choices(choices, weights=[0.5, 0.1, 0.1, 0.1, 0.1, 0.1])[0]
+                if self.action_type == 'lottery_man':
+                    field_num = random.choices(choices, weights=[0.1, 0.5, 0.1, 0.1, 0.1, 0.1])[0]
                 elif self.action_type == 'manufacturer':
-                    field_num = random.choices(choices, weights=[0.1, 0.0, 0.6, 0.1, 0.1, 0.1])[0]
+                    field_num = random.choices(choices, weights=[0.1, 0.1, 0.5, 0.1, 0.1, 0.1])[0]
                 elif self.action_type == 'oil_lover':
-                    field_num = random.choices(choices, weights=[0.1, 0.0, 0.1, 0.6, 0.1, 0.1])[0]
+                    field_num = random.choices(choices, weights=[0.1, 0.1, 0.1, 0.5, 0.1, 0.1])[0]
                 elif self.action_type == 'gambler':
-                    field_num = random.choices(choices, weights=[0.1, 0.0, 0.1, 0.1, 0.6, 0.1])[0]
+                    field_num = random.choices(choices, weights=[0.1, 0.1, 0.1, 0.1, 0.5, 0.1])[0]
                 elif self.action_type == 'cooperator':
-                    field_num = random.choices(choices, weights=[0.1, 0.0, 0.1, 0.1, 0.1, 0.6])[0]
+                    field_num = random.choices(choices, weights=[0.1, 0.1, 0.1, 0.1, 0.1, 0.5])[0]
                 action = Action(field_id=int(field_num), money_invested=float(inf))
             else:
                 if self.action_type == 'coop_based':
@@ -88,18 +90,19 @@ class Player:
                         key = list(states.keys())[-2]
                         state = states[key]
                         # print(state)
-                        if state['Field 4']['Number of players'] < 2: # при двух игроках хороший мультипликатор 3, при трех - уже 2
+                        if state['Field 4']['Number of players'] == 0: 
                             action = Action(field_id=4, money_invested=float(inf))
-                        elif 4 <= state['Field 6']['Number of players'] <= 5:
+                        elif 2 <= state['Field 6']['Number of players'] <= 3:
                             action = Action(field_id=6, money_invested=float(inf))
-                        elif state['Field 3']['Number of players'] <= 3:
+                        elif state['Field 3']['Number of players'] <= 2:
                             action = Action(field_id=3, money_invested=float(inf))
                         else:
-                            action = Action(field_id=5, money_invested=float(inf))
+                            field_num = random.choice([1, 2, 5])
+                            action = Action(field_id=field_num, money_invested=float(inf))
                 elif self.action_type == 'memory_based':
                     threshold = random.random()
                     if threshold < 0.3:
-                        field_num = random.choices([1, 3, 4, 5, 6])[0]
+                        field_num = random.choices([1, 2, 3, 4, 5, 6])[0]
                     else:
                         field_num = self.memory.index(max(self.memory))+1
                     action = Action(field_id=field_num, money_invested=float(inf))

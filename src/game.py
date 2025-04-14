@@ -227,14 +227,16 @@ class MarginGame:
             # print(f'Trainee chose field {field_for_training}')
             action_for_training = [0, 0, 0, 0, 0, 0]
             action_for_training[field_for_training-1]+=1
-            self.define_domination(iteration=i, end_iteration=self.n_iterations     )
+            self.define_domination(iteration=i, end_iteration=self.n_iterations)
             self.recompute_state(n_iteration = i, last_actions=last_actions)
             new_state = self.return_total_state(turn = i, turns_total=self.n_iterations)
             reward = self.fields[field_for_training].return_rate()
-            if reward == 0:
-                reward = -100
+            if self.players[1].leading_role == 1:
+                reward += 3
             if i==self.n_iterations:
                 done = 1
+                if self.players[1].money in self.cur_top3_money:
+                    reward += 50 * (self.cur_top3_money.index(self.players[1].money) + 1)
             self.replay_buffer.append((old_state, action_for_training, reward, new_state, done))
             # print(f'Old state: {old_state}')
             # print(f'new state: {new_state}')
@@ -270,7 +272,7 @@ class MarginGame:
             trainer.train_step(state=old_state, action=action_for_training, reward=reward, next_state=new_state, done=done)
             self.update_memory()
 
-    def run_multiple_games(self, n_games, model) -> None:
+    def run_multiple_games(self, n_games, model, ls) -> None:
         start_time = time.time()
         print(f'There will be {n_games} games played this time')
         print()
@@ -297,9 +299,12 @@ class MarginGame:
             self.init_states()
             for i in range(1, self.n_iterations+1):
                 total_state=self.return_total_state(turn=i-1, turns_total=self.n_iterations)
+                print(f'Total_State: {total_state}')
                 self.request_for_actions(total_state=total_state, model=model)
                 self.recompute_revenues()
                 last_actions = get_players_last_actions(players = self.players)
+                print(f'Trained player chooses {last_actions[0]}')
+                ls.append(last_actions[0])
                 self.define_domination(iteration = i, end_iteration=self.n_iterations)
                 self.recompute_state(n_iteration = i, last_actions=last_actions)
                 self.update_memory()
@@ -355,6 +360,7 @@ class MarginGame:
     def recompute_state(self, n_iteration, last_actions):
         last_actions_num = [last_actions.count(i) for i in range(1, len(self.fields)+1)]
         rates = self._return_fields_rates()
+        print(rates)
         for j in range(1, len(self.fields)+1):
             # self.states[f'Round {n_iteration}'][f'Field {j}'] = {}
             # self.states[f'Round {n_iteration}'][f'Field {j}']['Number of players'] = last_actions_num[0]
@@ -390,12 +396,16 @@ class MarginGame:
     def return_total_state(self, turn, turns_total):
         if turn == 0:
             # total_state = [1/turns_total, 0, 0, 0, 0, 0, 0]
-            # total_state = [0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0]
-            # total_state = [0, 0, 0, 0, 0, 0, 0]
-            # total_state = [0, 0, 0, 0]
-            total_state = [0, 0, 0, 0, 1, 1, 1, 0, 0, 0]
+            # total_state = [0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0] # ход + все поля + деньги + история всех полей
+            # total_state = [0, 0, 0, 0, 0, 0, 0] # ход + все поля
+            # total_state = [0, 0, 0, 0] # ход + кооп поля
+            # total_state = [0, 0, 0, 0, 1, 1, 1, 0, 0, 0] # ход + кооп поля + деньги + история кооп полей
+            total_state = [0, 1, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0] # ход + индикаторы хода + кооп поля + деньги + история кооп полей
         else:
             total_state = [turn/turns_total]
+            turn_start_idx = 1 if turn in [0, 1, 2] else 0
+            turn_end_idx = 1 if turn in [12, 13, 14] else 0
+            turns_indices=[turn_start_idx, turn_end_idx]
             aggregated_state = [0, 0, 0]
             prev_turn_state = self.states[turn]
             for item in prev_turn_state.keys():
@@ -424,6 +434,7 @@ class MarginGame:
                     player1_money_lead.append(100)
                 else:
                     player1_money_lead.append(self.players[1].money / top3_money[i])
+            total_state.extend(turns_indices)
             total_state.extend(player1_money_lead)
             total_state.extend(aggregated_state)
         return list(np.array(total_state, dtype = float))
@@ -458,7 +469,7 @@ def initialize_game(
         for id in players.keys():
             method_type = 'custom_all_in'
             players[id].method_type = method_type
-            action_type = random.choice(['manufacturer', 'oil_lover', 'gambler', 'cooperator', 'coop_based', 'memory_based'])
+            action_type = random.choice(['sber_lover', 'lottery_man', 'manufacturer', 'oil_lover', 'gambler', 'cooperator', 'coop_based', 'memory_based'])
             players[id].action_type = action_type
     elif classes == 'trained':
         for id in players.keys():
@@ -480,7 +491,7 @@ def initialize_game(
             if id == 1:
                 players[id].action_type = method
             else:
-                action_type = random.choice(['manufacturer', 'oil_lover', 'gambler', 'cooperator', 'coop_based', 'memory_based', 'Q_table', 'DQN'])
+                action_type = random.choices(['manufacturer', 'oil_lover', 'gambler', 'cooperator', 'coop_based', 'memory_based', 'Q_table', 'DQN'], weights=[1/12, 1/12, 1/12, 1/12, 1/12, 1/12, 1/4, 1/4])[0]
                 players[id].action_type = action_type
                 if action_type == 'Q_table':
                     # print('!!!')
@@ -540,7 +551,12 @@ def print_players_money(players: Players) -> None:
         print(f"\t`{color(player.name, color='magenta')}` (player_id: {player_id}): {round(player.money,3)}")
         
 def autonomous_game(n_games, epochs, classes, model, model_name, method, Q_table_models=[], DQN_models=[]):
+    player1_actions = []
     customs_stats = {
+        'sber_lover': {'wins': [], 'top3': [], 'domination_rounds': [], 'basic metric q1': [], 'basic metric q2': [],
+                         'basic metric q3': [], 'discounted metric q1': [], 'discounted metric q2': [], 'discounted metric q3': []},
+        'lottery_man': {'wins': [], 'top3': [], 'domination_rounds': [], 'basic metric q1': [], 'basic metric q2': [],
+                         'basic metric q3': [], 'discounted metric q1': [], 'discounted metric q2': [], 'discounted metric q3': []},
         'manufacturer': {'wins': [], 'top3': [], 'domination_rounds': [], 'basic metric q1': [], 'basic metric q2': [],
                          'basic metric q3': [], 'discounted metric q1': [], 'discounted metric q2': [], 'discounted metric q3': []},
         'oil_lover': {'wins': [], 'top3': [], 'domination_rounds': [], 'basic metric q1': [], 'basic metric q2': [],
@@ -573,11 +589,11 @@ def autonomous_game(n_games, epochs, classes, model, model_name, method, Q_table
         game = initialize_game(game_class=MarginGame, game_config=game_config, verbose=True, classes=classes, method = method, Q_table_models=Q_table_models, DQN_models=DQN_models)
         print('\n' + '='*100)
         game.players[1].model_name=model_name
-        if n_games == 1:
-            print(f'\nRunning game (total iterations: {game.n_iterations})...')
-            game.run_game()
-        else:
-            game.run_multiple_games(n_games = n_games, model=model)
+        # if n_games == 1:
+        #     print(f'\nRunning game (total iterations: {game.n_iterations})...')
+        #     game.run_game(model=model)
+        # else:
+        game.run_multiple_games(n_games = n_games, model=model, ls = player1_actions)
         if epochs != 1:
             for player_id, player in game.players.items():
                 if game.players[player_id] == game.players[1]:
@@ -596,6 +612,8 @@ def autonomous_game(n_games, epochs, classes, model, model_name, method, Q_table
                 dict['discounted metric q1'].append(np.quantile(discounted_stats, 0.25))
                 dict['discounted metric q2'].append(np.quantile(discounted_stats, 0.5))
                 dict['discounted metric q3'].append(np.quantile(discounted_stats, 0.75))
+    for i in range(1, 7):
+        print(f'Trained player chose {i} {player1_actions.count(i)} times')
     if epochs != 1:
         file_path='stats.json'
         with open(file_path, 'w', encoding='utf-8') as file:
@@ -643,10 +661,10 @@ def train_with_DQN(self_play):
                 model.save(file_name=f'DQN_{n_games}_mid-train.pth')
             n_games+=1
     else:
-        SAVE_STEPS=10000
+        SAVE_STEPS=5000
         POLICY_BUFFER_LEN=15
         PLAY_VS_LATEST_POLICY_RATIO=0.5
-        SWAP_STEPS=10000
+        SWAP_STEPS=5000
         model_folder = deque(maxlen=POLICY_BUFFER_LEN)
         game = initialize_game(game_class=MarginGame, game_config=game_config, verbose=True, classes='original', method='DQN')
         n_games=1
@@ -789,9 +807,36 @@ def train_with_Q_table(self_play):
             plot(plot_scores, plot_mean_scores)
             n_games+=1
 
-if __name__ == '__main__':
-    # autonomous_game(n_games=100, epochs=50, classes='assessing_trained', model = Q_table(num_states=11000, num_actions=6), model_name='Q_table_top_with_self_play.npy', method='Q_table',
-    #                 Q_table_models=['Q_table_mid-train_with_self_play_1000.npy', 'Q_table_mid-train_with_self_play_2000.npy', 'Q_table_top_with_self_play.npy'],
-    #                 DQN_models=['model1000mid-train.pth', 'model2000mid-train.pth', 'modeltop_mid-train.pth'])
+if __name__ == '__main__':                                                      #Q_table(num_states=11000, num_actions=6)                        
+    # autonomous_game(n_games=10, epochs=50, classes='random', model=Q_table(num_states=11000, num_actions=6), model_name='Q_table_mid-train_with_self_play_200000.npy', method='Q_table',
+    #                 Q_table_models=['Q_table_mid-train_with_self_play_200000.npy', 'Q_table_mid-train_with_self_play_60000.npy', 'Q_table_mid-train_with_self_play_100000.npy', 'Q_table_mid-train_with_self_play_500000.npy', 'Q_table_top_with_self_play (1).npy', 'Q_table_mid-train_with_self_play_400000.npy'],
+    #                 DQN_models=['DQN_50000_self_play_mid-train.pth', 'DQN_30000_self_play_mid-train.pth', 'DQN_100000_self_play_mid-train.pth', 'DQN_top_mid-train (1).pth', 'DQN_150000_self_play_mid-train.pth'])
     train_with_DQN(self_play=True)
     #train_with_Q_table(self_play=True)
+
+    # file_path='stats.json'
+    # with open(file_path, "r", encoding="utf-8") as file:
+    #     data=json.load(file)
+    # path = 'C:/Users/WS user/MarginGame/MarginGame2/MarginGame/Graphs/Duo_comparison_vis/'
+    # for metric in ['wins','top3','domination_rounds','basic metric q1','basic metric q2','basic metric q3','discounted metric q1','discounted metric q2','discounted metric q3']:
+    #     for type in data.keys():
+    #         if type != 'Main':
+    #             plt.clf()
+    #             plt.hist(data[type][metric], bins=50, density=True, label=type, alpha=0.5) #density=True, bins=50?
+    #             plt.hist(data['Main'][metric], bins=50, density=True, label=type, alpha=0.5) #density=True, bins=50?
+    #             plt.legend([type, 'Main'])
+    #             plt.title(f'Main vs {type}: {metric}')
+    #             name=path+f'Main vs {type}_{metric}.png'
+    #             plt.savefig(name)
+
+    # file_path='stats.json'
+    # with open(file_path, "r", encoding="utf-8") as file:
+    #     data=json.load(file)
+    # path = 'C:/Users/WS user/MarginGame/MarginGame2/MarginGame/Graphs/Overall_vis/'
+    # for type in data.keys():
+    #     for metric in ['wins','top3','domination_rounds','basic metric q1','basic metric q2','basic metric q3','discounted metric q1','discounted metric q2','discounted metric q3']:
+    #         plt.clf()
+    #         plt.hist(data[type][metric], bins=50, density=True) #density=True, bins=50?
+    #         plt.title(type + ':' + metric)
+    #         name=path+type+'_'+metric+'.png'
+    #         plt.savefig(name)

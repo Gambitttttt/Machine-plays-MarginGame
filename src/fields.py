@@ -52,7 +52,7 @@ Fields = t.Dict[FIELD_ID, Field]
 class SberBank(Field):
     
     name: str='SberBank'
-    interest_rate: float=0.1
+    interest_rate: float=0.3
     outcome: float=0.0 
 
     @property
@@ -87,8 +87,9 @@ class SberBank(Field):
 class CryptoStartup(Field):
     
     name: str='CryptoStartup'
-    success_probability: float=0.1
-    multiplier: float=5.5
+    success_probability: float=0.2
+    multiplier_high: float=5.0
+    multiplier_low: float=0.6
     oucome: float=0.0
     
     @property
@@ -97,8 +98,8 @@ class CryptoStartup(Field):
             f"""
             {self.name} is a risky one!
             {color('The revenue formula:', color='yellow')}
-            revenue = (invested_money x {self.multiplier}) with probability = {self.success_probability} or you get 
-            0 with probability = {1 - self.success_probability}
+            revenue = (invested_money x {self.multiplier_high}) with probability = {self.success_probability} or you get 
+            x {self.multiplier_low} with probability = {1 - self.success_probability}
             """
         )
     
@@ -107,7 +108,7 @@ class CryptoStartup(Field):
         players: Players,
     ) -> PlayersRevenues:
         players_revenues = {}
-        multiplier = self.multiplier if random.choices([0, 1], [1-self.success_probability, self.success_probability])[0] == 1 else 0
+        multiplier = self.multiplier_high if random.choices([0, 1], [1-self.success_probability, self.success_probability])[0] == 1 else self.multiplier_low
         self.outcome = multiplier
         for player_id, player in players.items():
             action = player.get_last_action()
@@ -124,9 +125,9 @@ class CryptoStartup(Field):
 class Manufactory(Field):
     
     name: str='Manufactory'
-    total_players_threshold: int=4
-    high_multiplier: float=2.1
-    low_multiplayer: float=0.2
+    total_players_threshold: int=3
+    high_multiplier: float=2.0
+    low_multiplayer: float=0.5
     outcome: float=0.0
     
     @property
@@ -171,8 +172,8 @@ class Manufactory(Field):
 class OilCompany(Field):
     
     name: str='OilCompany'
-    intercept: float=5.0
-    slope: float=-1.0
+    intercept: float=0.5
+    slope: float=2.5
     minimum_return_value: float=0.0
     outcome: float=0.0
 
@@ -195,7 +196,8 @@ class OilCompany(Field):
             for player_id, player in players.items()
             if player.get_last_action().field_id == self.id
         ])
-        resulting_multiplier = max(0.0, self.slope * total_players + self.intercept)
+        resulting_multiplier = self.intercept + self.slope / total_players if total_players != 0 else self.intercept+self.slope
+        # resulting_multiplier = max(0.0, self.slope * total_players + self.intercept)
         self.outcome = resulting_multiplier
         players_revenues = {}
         for player_id, player in players.items():
