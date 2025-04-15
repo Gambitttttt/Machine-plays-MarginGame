@@ -219,7 +219,7 @@ class MarginGame:
                 self.players[player_id].money = 10
                 self.players[player_id].memory = init_memory()
         for i in range(1, self.n_iterations+1):
-            old_state = self.return_total_state(turn = i-1, turns_total=self.n_iterations)
+            old_state = self.return_total_state(turn = i-1, turns_total=self.n_iterations, method='DQN')
             self.request_for_actions(epsilon=epsilon, n_games=n_games,decay=decay, total_state=old_state, model=model, trained_models=trained_models)
             self.recompute_revenues()
             last_actions = get_players_last_actions(players = self.players)
@@ -229,7 +229,7 @@ class MarginGame:
             action_for_training[field_for_training-1]+=1
             self.define_domination(iteration=i, end_iteration=self.n_iterations)
             self.recompute_state(n_iteration = i, last_actions=last_actions)
-            new_state = self.return_total_state(turn = i, turns_total=self.n_iterations)
+            new_state = self.return_total_state(turn = i, turns_total=self.n_iterations, method='DQN')
             reward = self.players[1].money
             # reward = self.fields[field_for_training].return_rate()
             if self.players[1].leading_role == 1:
@@ -256,7 +256,7 @@ class MarginGame:
                 self.players[player_id].money = 10
                 self.players[player_id].memory = init_memory()
         for i in range(1, self.n_iterations+1):
-            old_state = self.return_total_state(turn = i-1, turns_total=self.n_iterations)
+            old_state = self.return_total_state(turn = i-1, turns_total=self.n_iterations, method='Q_table')
             self.request_for_actions(epsilon=epsilon, n_games=n_games, decay=decay, total_state=old_state, model=model, trained_models=trained_models)
             self.recompute_revenues()
             last_actions = get_players_last_actions(players = self.players)
@@ -265,7 +265,7 @@ class MarginGame:
             action_for_training = field_for_training
             self.define_domination(iteration=i, end_iteration=self.n_iterations)
             self.recompute_state(n_iteration = i, last_actions=last_actions)
-            new_state = self.return_total_state(turn = i, turns_total=self.n_iterations)
+            new_state = self.return_total_state(turn = i, turns_total=self.n_iterations, method='Q_table')
             reward = self.players[1].money
             # reward = self.fields[field_for_training].return_rate()
             if self.players[1].leading_role == 1:
@@ -278,7 +278,7 @@ class MarginGame:
             trainer.train_step(state=old_state, action=action_for_training, reward=reward, next_state=new_state, done=done)
             self.update_memory()
 
-    def run_multiple_games(self, n_games, model, ls) -> None:
+    def run_multiple_games(self, n_games, model, ls, method) -> None:
         start_time = time.time()
         print(f'There will be {n_games} games played this time')
         print()
@@ -304,7 +304,7 @@ class MarginGame:
                 self.players[player_id].memory = init_memory()
             self.init_states()
             for i in range(1, self.n_iterations+1):
-                total_state=self.return_total_state(turn=i-1, turns_total=self.n_iterations)
+                total_state=self.return_total_state(turn=i-1, turns_total=self.n_iterations, method=method)
                 print(f'Total_State: {total_state}')
                 self.request_for_actions(total_state=total_state, model=model)
                 self.recompute_revenues()
@@ -366,7 +366,7 @@ class MarginGame:
     def recompute_state(self, n_iteration, last_actions):
         last_actions_num = [last_actions.count(i) for i in range(1, len(self.fields)+1)]
         rates = self._return_fields_rates()
-        print(rates)
+        # print(rates)
         for j in range(1, len(self.fields)+1):
             # self.states[f'Round {n_iteration}'][f'Field {j}'] = {}
             # self.states[f'Round {n_iteration}'][f'Field {j}']['Number of players'] = last_actions_num[0]
@@ -377,7 +377,7 @@ class MarginGame:
             last_actions_num.pop(0)
             self.states[n_iteration][f'Field {j}']['Return rate'] = rates[j]
             self.states[n_iteration]['Top3 money'] = self.cur_top3_money
-        print(self.states[list(self.states.keys())[-1]])    
+        # print(self.states[list(self.states.keys())[-1]])    
         if n_iteration != self.n_iterations:
             self.states[n_iteration+1] = {}
 
@@ -401,14 +401,17 @@ class MarginGame:
             last_field = player.get_last_action().field_id
             player.memory[last_field-1] = rates[last_field]
 
-    def return_total_state(self, turn, turns_total):
+    def return_total_state(self, turn, turns_total, method):
         if turn == 0:
+            if method == 'Q_table':
+                total_state = [0, 0, 0, 0]    
             # total_state = [1/turns_total, 0, 0, 0, 0, 0, 0]
             # total_state = [0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0] # ход + все поля + деньги + история всех полей
             # total_state = [0, 0, 0, 0, 0, 0, 0] # ход + все поля
             # total_state = [0, 0, 0, 0] # ход + кооп поля
             # total_state = [0, 0, 0, 0, 1, 1, 1, 0, 0, 0] # ход + кооп поля + деньги + история кооп полей
-            total_state = [0, 1, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0] # ход + индикаторы хода + кооп поля + деньги + история кооп полей
+            elif method == 'DQN':
+                total_state = [0, 1, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0] # ход + индикаторы хода + кооп поля + деньги + история кооп полей
         else:
             total_state = [turn/turns_total]
             turn_start_idx = 1 if turn in [0, 1, 2] else 0
@@ -442,9 +445,11 @@ class MarginGame:
                     player1_money_lead.append(100)
                 else:
                     player1_money_lead.append(self.players[1].money / top3_money[i])
-            total_state.extend(turns_indices)
-            total_state.extend(player1_money_lead)
-            total_state.extend(aggregated_state)
+            if method == 'DQN':
+                total_state.extend(turns_indices)
+                total_state.extend(player1_money_lead)
+                total_state.extend(aggregated_state)
+        print(total_state)
         return list(np.array(total_state, dtype = float))
     
     def train_long_memory(self, batch_size, trainer):
@@ -601,7 +606,7 @@ def autonomous_game(n_games, epochs, classes, model, model_name, method, Q_table
         #     print(f'\nRunning game (total iterations: {game.n_iterations})...')
         #     game.run_game(model=model)
         # else:
-        game.run_multiple_games(n_games = n_games, model=model, ls = player1_actions)
+        game.run_multiple_games(n_games = n_games, model=model, ls = player1_actions, method=method)
         if epochs != 1:
             for player_id, player in game.players.items():
                 if game.players[player_id] == game.players[1]:
@@ -816,26 +821,26 @@ def train_with_Q_table(self_play):
             n_games+=1
 
 if __name__ == '__main__':                                                      #Q_table(num_states=11000, num_actions=6)                        
-    # autonomous_game(n_games=10, epochs=50, classes='assessing_trained', model=DQN(), model_name='DQN_10000_self_play_mid-train (1).pth', method='DQN',
-    #                 Q_table_models=['Q_table_mid-train_with_self_play_200000.npy', 'Q_table_mid-train_with_self_play_60000.npy', 'Q_table_mid-train_with_self_play_100000.npy', 'Q_table_mid-train_with_self_play_500000.npy', 'Q_table_top_with_self_play (1).npy', 'Q_table_mid-train_with_self_play_400000.npy'],
-    #                 DQN_models=['DQN_20000_self_play_mid-train (1).pth', 'DQN_40000_self_play_mid-train (1).pth', 'DQN_30000_self_play_mid-train (1).pth', 'DQN_top_mid-train (2).pth', 'DQN_50000_self_play_mid-train (1).pth'])
+    # autonomous_game(n_games=10, epochs=50, classes='assessing_trained', model=Q_table(num_states=11000, num_actions=6), model_name='DQN_top_mid-train (3).pth', method='Q_table',
+    #                 Q_table_models=['Q_table_mid-train_with_self_play_30000 (1).npy', 'Q_table_mid-train_with_self_play_75000.npy', 'Q_table_mid-train_with_self_play_100000 (1).npy', 'Q_table_mid-train_with_self_play_130000 (1).npy', 'Q_table_top_with_self_play (2).npy', 'Q_table_mid-train_with_self_play_160000 (1).npy'],
+    #                 DQN_models=['DQN_20000_self_play_mid-train (2).pth', 'DQN_40000_self_play_mid-train (2).pth', 'DQN_30000_self_play_mid-train (2).pth', 'DQN_top_mid-train (3).pth', 'DQN_10000_self_play_mid-train (2).pth'])
     # train_with_DQN(self_play=True)
     train_with_Q_table(self_play=True)
 
-    # file_path='stats.json'
-    # with open(file_path, "r", encoding="utf-8") as file:
-    #     data=json.load(file)
-    # path = 'C:/Users/WS user/MarginGame/MarginGame2/MarginGame/Graphs/Duo_comparison_vis/'
-    # for metric in ['wins','top3','domination_rounds','basic metric q1','basic metric q2','basic metric q3','discounted metric q1','discounted metric q2','discounted metric q3']:
-    #     for type in data.keys():
-    #         if type != 'Main':
-    #             plt.clf()
-    #             plt.hist(data[type][metric], bins=50, density=True, label=type, alpha=0.5) #density=True, bins=50?
-    #             plt.hist(data['Main'][metric], bins=50, density=True, label=type, alpha=0.5) #density=True, bins=50?
-    #             plt.legend([type, 'Main'])
-    #             plt.title(f'Main vs {type}: {metric}')
-    #             name=path+f'Main vs {type}_{metric}.png'
-    #             plt.savefig(name)
+    file_path='stats.json'
+    with open(file_path, "r", encoding="utf-8") as file:
+        data=json.load(file)
+    path = 'C:/Users/WS user/MarginGame/MarginGame2/MarginGame/Graphs/Duo_comparison_vis/'
+    for metric in ['wins','top3','domination_rounds','basic metric q1','basic metric q2','basic metric q3','discounted metric q1','discounted metric q2','discounted metric q3']:
+        for type in data.keys():
+            if type != 'Main':
+                plt.clf()
+                plt.hist(data[type][metric], bins=50, density=True, label=type, alpha=0.5) #density=True, bins=50?
+                plt.hist(data['Main'][metric], bins=50, density=True, label=type, alpha=0.5) #density=True, bins=50?
+                plt.legend([type, 'Main'])
+                plt.title(f'Main vs {type}: {metric}')
+                name=path+f'Main vs {type}_{metric}.png'
+                plt.savefig(name)
 
     # file_path='stats.json'
     # with open(file_path, "r", encoding="utf-8") as file:
