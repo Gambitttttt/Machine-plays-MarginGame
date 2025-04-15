@@ -819,8 +819,8 @@ if __name__ == '__main__':                                                      
     # autonomous_game(n_games=10, epochs=50, classes='assessing_trained', model=DQN(), model_name='DQN_10000_self_play_mid-train (1).pth', method='DQN',
     #                 Q_table_models=['Q_table_mid-train_with_self_play_200000.npy', 'Q_table_mid-train_with_self_play_60000.npy', 'Q_table_mid-train_with_self_play_100000.npy', 'Q_table_mid-train_with_self_play_500000.npy', 'Q_table_top_with_self_play (1).npy', 'Q_table_mid-train_with_self_play_400000.npy'],
     #                 DQN_models=['DQN_20000_self_play_mid-train (1).pth', 'DQN_40000_self_play_mid-train (1).pth', 'DQN_30000_self_play_mid-train (1).pth', 'DQN_top_mid-train (2).pth', 'DQN_50000_self_play_mid-train (1).pth'])
-    train_with_DQN(self_play=True)
-    #train_with_Q_table(self_play=True)
+    # train_with_DQN(self_play=True)
+    train_with_Q_table(self_play=True)
 
     # file_path='stats.json'
     # with open(file_path, "r", encoding="utf-8") as file:
