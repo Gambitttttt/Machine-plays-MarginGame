@@ -412,12 +412,13 @@ class MarginGame:
             # total_state = [0, 0, 0, 0, 1, 1, 1, 0, 0, 0] # ход + кооп поля + деньги + история кооп полей
             elif method == 'DQN':
                 # total_state = [0, 1, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0] # ход + индикаторы хода + кооп поля + деньги + история кооп полей
-                total_state = [0, 0, 0, 0, 1, 1, 1, 0, 0, 0] # ход + кооп поля + деньги + история кооп полей       
+                # total_state = [0, 0, 0, 0, 1, 1, 1, 0, 0, 0] # ход + кооп поля + деньги + история кооп полей
+                total_state = [0, 0, 0, 0, 0, 0, 0] # ход + все поля
         else:
             total_state = [turn/turns_total]
-            turn_start_idx = 1 if turn in [0, 1, 2] else 0
-            turn_end_idx = 1 if turn in [12, 13, 14] else 0
-            turns_indices=[turn_start_idx, turn_end_idx]
+            # turn_start_idx = 1 if turn in [0, 1, 2] else 0
+            # turn_end_idx = 1 if turn in [12, 13, 14] else 0
+            # turns_indices=[turn_start_idx, turn_end_idx]
             aggregated_state = [0, 0, 0]
             prev_turn_state = self.states[turn]
             for item in prev_turn_state.keys():
@@ -435,20 +436,20 @@ class MarginGame:
                             aggregated_state[2] += turn_state[item]['Number of players']/len(self.players.keys())
             aggregated_state = np.array(aggregated_state)
             aggregated_state = aggregated_state / turn
-            top3_money = prev_turn_state['Top3 money']
-            player1_money_lead = []
-            for i in range(len(top3_money)):
-                if self.players[1].money == 0 and top3_money[i] == 0:
-                    player1_money_lead.append(1)
-                elif top3_money[i] == 0:
-                    player1_money_lead.append(100)
-                elif self.players[1].money / top3_money[i] > 100:
-                    player1_money_lead.append(100)
-                else:
-                    player1_money_lead.append(self.players[1].money / top3_money[i])
+            #top3_money = prev_turn_state['Top3 money']
+            #player1_money_lead = []
+            # for i in range(len(top3_money)):
+            #     if self.players[1].money == 0 and top3_money[i] == 0:
+            #         player1_money_lead.append(1)
+            #     elif top3_money[i] == 0:
+            #         player1_money_lead.append(100)
+            #     elif self.players[1].money / top3_money[i] > 100:
+            #         player1_money_lead.append(100)
+            #     else:
+            #         player1_money_lead.append(self.players[1].money / top3_money[i])
             if method == 'DQN':
                 # total_state.extend(turns_indices)
-                total_state.extend(player1_money_lead)
+                # total_state.extend(player1_money_lead)
                 total_state.extend(aggregated_state)
         print(total_state)
         return list(np.array(total_state, dtype = float))
@@ -718,6 +719,10 @@ def train_with_DQN(self_play):
             if score > top_score:
                     top_score = score
                     model.save(file_name='DQN_top_mid-train.pth')
+
+            if n_games % 40000:
+                name=f'DQN_{n_games}_self_play_mid-train.pth'
+                model.save(file_name=name)
 
             print('Game', n_games, 'Score', score, 'Top score:', top_score)
 
