@@ -7,7 +7,7 @@ import os
 class DQN(nn.Module):
     def __init__(self):
         super().__init__()
-        self.fc1 = nn.Linear(12, 64)
+        self.fc1 = nn.Linear(10, 64)
         self.fc2 = nn.Linear(64, 64)
         self.fc3 = nn.Linear(64, 6)
     
