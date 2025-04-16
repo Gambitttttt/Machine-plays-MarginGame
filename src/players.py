@@ -108,7 +108,7 @@ class Player:
                     action = Action(field_id=field_num, money_invested=float(inf))
                 elif self.action_type == 'DQN_learning':
                     random_num = random.random()
-                    if random_num < epsilon - n_games / decay:
+                    if random_num < max(epsilon - n_games / decay, 0.1):
                         field_num = random.choice([i for i in range(1, num_options)])
                     else:
                         cur_state = torch.tensor(total_state, dtype=torch.float)
