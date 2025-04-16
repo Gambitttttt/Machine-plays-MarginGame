@@ -411,7 +411,8 @@ class MarginGame:
             # total_state = [0, 0, 0, 0] # ход + кооп поля
             # total_state = [0, 0, 0, 0, 1, 1, 1, 0, 0, 0] # ход + кооп поля + деньги + история кооп полей
             elif method == 'DQN':
-                total_state = [0, 1, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0] # ход + индикаторы хода + кооп поля + деньги + история кооп полей
+                # total_state = [0, 1, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0] # ход + индикаторы хода + кооп поля + деньги + история кооп полей
+                total_state = [0, 0, 0, 0, 1, 1, 1, 0, 0, 0] # ход + кооп поля + деньги + история кооп полей       
         else:
             total_state = [turn/turns_total]
             turn_start_idx = 1 if turn in [0, 1, 2] else 0
@@ -446,7 +447,7 @@ class MarginGame:
                 else:
                     player1_money_lead.append(self.players[1].money / top3_money[i])
             if method == 'DQN':
-                total_state.extend(turns_indices)
+                # total_state.extend(turns_indices)
                 total_state.extend(player1_money_lead)
                 total_state.extend(aggregated_state)
         print(total_state)
@@ -633,12 +634,12 @@ def autonomous_game(n_games, epochs, classes, model, model_name, method, Q_table
             json.dump(customs_stats, file, ensure_ascii=False, indent=4)
 
 def train_with_DQN(self_play):
-    MAX_MEMORY = 20480
-    BATCH_SIZE = 2048
+    MAX_MEMORY = 50000
+    BATCH_SIZE = 5000
     LR = 0.1
-    EPSILON = 0.5
+    EPSILON = 1
     GAMMA = 0.99
-    DECAY = 15000
+    DECAY = 80000
 
     plot_scores = []
     plot_mean_scores = []
@@ -670,14 +671,14 @@ def train_with_DQN(self_play):
             mean_score = total_score / n_games
             plot_mean_scores.append(mean_score)
             plot(plot_scores, plot_mean_scores)
-            if n_games % 10000 == 0:
+            if n_games % 40000 == 0:
                 model.save(file_name=f'DQN_{n_games}_mid-train.pth')
             n_games+=1
     else:
-        SAVE_STEPS=5000
+        SAVE_STEPS=80000
         POLICY_BUFFER_LEN=15
         PLAY_VS_LATEST_POLICY_RATIO=0.5
-        SWAP_STEPS=5000
+        SWAP_STEPS=80000
         model_folder = deque(maxlen=POLICY_BUFFER_LEN)
         game = initialize_game(game_class=MarginGame, game_config=game_config, verbose=True, classes='original', method='DQN')
         n_games=1
@@ -821,11 +822,11 @@ def train_with_Q_table(self_play):
             n_games+=1
 
 if __name__ == '__main__':                                                      #Q_table(num_states=11000, num_actions=6)                        
-    # autonomous_game(n_games=10, epochs=50, classes='assessing_trained', model=Q_table(num_states=11000, num_actions=6), model_name='DQN_top_mid-train (3).pth', method='Q_table',
-    #                 Q_table_models=['Q_table_mid-train_with_self_play_30000 (1).npy', 'Q_table_mid-train_with_self_play_75000.npy', 'Q_table_mid-train_with_self_play_100000 (1).npy', 'Q_table_mid-train_with_self_play_130000 (1).npy', 'Q_table_top_with_self_play (2).npy', 'Q_table_mid-train_with_self_play_160000 (1).npy'],
-    #                 DQN_models=['DQN_20000_self_play_mid-train (2).pth', 'DQN_40000_self_play_mid-train (2).pth', 'DQN_30000_self_play_mid-train (2).pth', 'DQN_top_mid-train (3).pth', 'DQN_10000_self_play_mid-train (2).pth'])
-    # train_with_DQN(self_play=True)
-    train_with_Q_table(self_play=True)
+    # autonomous_game(n_games=10, epochs=50, classes='assessing_trained', model=DQN(), model_name='DQN_80000_self_play_mid-train.pth', method='DQN',
+    #                 Q_table_models=['Q_table_mid-train_with_self_play_50000.npy', 'Q_table_mid-train_with_self_play_100000 (2).npy', 'Q_table_top_with_self_play (3).npy', 'Q_table_mid-train_with_self_play_150000 (1).npy'],
+    #                 DQN_models=['DQN_80000_self_play_mid-train.pth', 'DQN_40000_self_play_mid-train (2).pth', 'DQN_60000_self_play_mid-train.pth', 'DQN_top_mid-train (4).pth', 'DQN_95000_self_play_mid-train.pth'])
+    train_with_DQN(self_play=True)
+    # train_with_Q_table(self_play=True)
 
     file_path='stats.json'
     with open(file_path, "r", encoding="utf-8") as file:
