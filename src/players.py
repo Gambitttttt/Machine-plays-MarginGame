@@ -130,7 +130,7 @@ class Player:
                     action = Action(field_id=field_num, money_invested=float(inf))        
                 elif self.action_type == 'Q_table_learning':
                     random_num = random.random()
-                    if random_num < epsilon - n_games / decay:
+                    if random_num < max(epsilon - n_games / decay, 0.1):
                         field_num = random.choice([i for i in range(1, num_options)])
                     else:
                         cur_state = total_state
@@ -148,11 +148,11 @@ class Player:
                         prediction = add_model.get_pred(cur_state)
                         field_num=prediction
                     action = Action(field_id=field_num, money_invested=float(inf))
-        elif self.method_type == 'custom_random_investment':
-            classes = ['sber_lover', 'loser', 'manufacturer', 'oil_lover', 'gambler', 'cooperator']
-            field_num = classes.index(self.action_type) + 1
-            investment = round(random.uniform(0.0, money_available), 1)
-            action = Action(field_id=int(field_num), money_invested=investment) 
+        # elif self.method_type == 'custom_random_investment':
+        #     classes = ['sber_lover', 'loser', 'manufacturer', 'oil_lover', 'gambler', 'cooperator']
+        #     field_num = classes.index(self.action_type) + 1
+        #     investment = round(random.uniform(0.0, money_available), 1)
+        #     action = Action(field_id=int(field_num), money_invested=investment) 
         action.money_invested = min(self.money, action.money_invested)
         self.history.append(action)
         self.money -= action.money_invested

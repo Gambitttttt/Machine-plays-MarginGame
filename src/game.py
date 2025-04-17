@@ -451,7 +451,7 @@ class MarginGame:
                 # total_state.extend(turns_indices)
                 # total_state.extend(player1_money_lead)
                 total_state.extend(aggregated_state)
-        print(total_state)
+        #print(total_state)
         return list(np.array(total_state, dtype = float))
     
     def train_long_memory(self, batch_size, trainer):
@@ -720,7 +720,7 @@ def train_with_DQN(self_play):
                     top_score = score
                     model.save(file_name='DQN_top_mid-train.pth')
 
-            if n_games % 40000:
+            if n_games % 40000 == 0:
                 name=f'DQN_{n_games}_self_play_mid-train.pth'
                 model.save(file_name=name)
 
@@ -735,9 +735,9 @@ def train_with_DQN(self_play):
 
 def train_with_Q_table(self_play):
     LR = 0.1
-    EPSILON = 0.5
+    EPSILON = 1
     GAMMA = 0.99
-    DECAY = 15000
+    DECAY = 80000
 
     plot_scores = []
     plot_mean_scores = []
@@ -773,10 +773,10 @@ def train_with_Q_table(self_play):
                 model.save(name=f'Q_table_without_self_play_{n_games}.npy')
             n_games+=1
     else:
-        SAVE_STEPS=5000
+        SAVE_STEPS=80000
         POLICY_BUFFER_LEN=15
         PLAY_VS_LATEST_POLICY_RATIO=0.5
-        SWAP_STEPS=5000
+        SWAP_STEPS=80000
         model_folder = deque(maxlen=POLICY_BUFFER_LEN)
         game = initialize_game(game_class=MarginGame, game_config=game_config, verbose=True, classes='original', method='Q_table')
         n_games=1
@@ -824,29 +824,31 @@ def train_with_Q_table(self_play):
             mean_score = total_score / n_games
             plot_mean_scores.append(mean_score)
             plot(plot_scores, plot_mean_scores)
+            if n_games % 40000 == 0:
+                model.save(name=f'Q_table_without_self_play_{n_games}.npy')
             n_games+=1
 
 if __name__ == '__main__':                                                      #Q_table(num_states=11000, num_actions=6)                        
     # autonomous_game(n_games=10, epochs=50, classes='assessing_trained', model=DQN(), model_name='DQN_80000_self_play_mid-train.pth', method='DQN',
     #                 Q_table_models=['Q_table_mid-train_with_self_play_50000.npy', 'Q_table_mid-train_with_self_play_100000 (2).npy', 'Q_table_top_with_self_play (3).npy', 'Q_table_mid-train_with_self_play_150000 (1).npy'],
     #                 DQN_models=['DQN_80000_self_play_mid-train.pth', 'DQN_40000_self_play_mid-train (2).pth', 'DQN_60000_self_play_mid-train.pth', 'DQN_top_mid-train (4).pth', 'DQN_95000_self_play_mid-train.pth'])
-    train_with_DQN(self_play=True)
-    # train_with_Q_table(self_play=True)
+    # train_with_DQN(self_play=True)
+    train_with_Q_table(self_play=True)
 
-    file_path='stats.json'
-    with open(file_path, "r", encoding="utf-8") as file:
-        data=json.load(file)
-    path = 'C:/Users/WS user/MarginGame/MarginGame2/MarginGame/Graphs/Duo_comparison_vis/'
-    for metric in ['wins','top3','domination_rounds','basic metric q1','basic metric q2','basic metric q3','discounted metric q1','discounted metric q2','discounted metric q3']:
-        for type in data.keys():
-            if type != 'Main':
-                plt.clf()
-                plt.hist(data[type][metric], bins=50, density=True, label=type, alpha=0.5) #density=True, bins=50?
-                plt.hist(data['Main'][metric], bins=50, density=True, label=type, alpha=0.5) #density=True, bins=50?
-                plt.legend([type, 'Main'])
-                plt.title(f'Main vs {type}: {metric}')
-                name=path+f'Main vs {type}_{metric}.png'
-                plt.savefig(name)
+    # file_path='stats.json'
+    # with open(file_path, "r", encoding="utf-8") as file:
+    #     data=json.load(file)
+    # path = 'C:/Users/WS user/MarginGame/MarginGame2/MarginGame/Graphs/Duo_comparison_vis/'
+    # for metric in ['wins','top3','domination_rounds','basic metric q1','basic metric q2','basic metric q3','discounted metric q1','discounted metric q2','discounted metric q3']:
+    #     for type in data.keys():
+    #         if type != 'Main':
+    #             plt.clf()
+    #             plt.hist(data[type][metric], bins=50, density=True, label=type, alpha=0.5) #density=True, bins=50?
+    #             plt.hist(data['Main'][metric], bins=50, density=True, label=type, alpha=0.5) #density=True, bins=50?
+    #             plt.legend([type, 'Main'])
+    #             plt.title(f'Main vs {type}: {metric}')
+    #             name=path+f'Main vs {type}_{metric}.png'
+    #             plt.savefig(name)
 
     # file_path='stats.json'
     # with open(file_path, "r", encoding="utf-8") as file:
