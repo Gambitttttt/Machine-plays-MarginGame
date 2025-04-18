@@ -506,7 +506,7 @@ def initialize_game(
             if id == 1:
                 players[id].action_type = method
             else:
-                action_type = random.choices(['sber_lover', 'lottery_man', 'manufacturer', 'oil_lover', 'gambler', 'cooperator', 'coop_based', 'memory_based', 'DQN'], weights=[1/16, 1/16, 1/16, 1/16, 1/16, 1/16, 1/16, 1/16, 1/2])[0] # Пока без Q_Table
+                action_type = random.choices(['sber_lover', 'lottery_man', 'manufacturer', 'oil_lover', 'gambler', 'cooperator', 'coop_based', 'memory_based', 'Q_table'], weights=[1/16, 1/16, 1/16, 1/16, 1/16, 1/16, 1/16, 1/16, 1/2])[0] # Пока без Q_Table
                 players[id].action_type = action_type
                 if action_type == 'Q_table':
                     # print('!!!')
@@ -720,7 +720,7 @@ def train_with_DQN(self_play):
                     top_score = score
                     model.save(file_name='DQN_top_mid-train.pth')
 
-            if n_games % 40000 == 0:
+            if n_games % 20000 == 0:
                 name=f'DQN_{n_games}_self_play_mid-train.pth'
                 model.save(file_name=name)
 
@@ -825,15 +825,15 @@ def train_with_Q_table(self_play):
             plot_mean_scores.append(mean_score)
             plot(plot_scores, plot_mean_scores)
             if n_games % 40000 == 0:
-                model.save(name=f'Q_table_without_self_play_{n_games}.npy')
+                model.save(name=f'Q_table_with_self_play_{n_games}.npy')
             n_games+=1
 
 if __name__ == '__main__':                                                      #Q_table(num_states=11000, num_actions=6)                        
-    # autonomous_game(n_games=10, epochs=50, classes='assessing_trained', model=DQN(), model_name='DQN_80000_self_play_mid-train.pth', method='DQN',
-    #                 Q_table_models=['Q_table_mid-train_with_self_play_50000.npy', 'Q_table_mid-train_with_self_play_100000 (2).npy', 'Q_table_top_with_self_play (3).npy', 'Q_table_mid-train_with_self_play_150000 (1).npy'],
+    # autonomous_game(n_games=10, epochs=50, classes='assessing_trained', model=Q_table(num_states=11000, num_actions=6), model_name='Q_table_without_self_play_40000.npy', method='Q_table',
+    #                 Q_table_models=['Q_table_without_self_play_40000.npy', 'Q_table_top_with_self_play (4).npy'],
     #                 DQN_models=['DQN_80000_self_play_mid-train.pth', 'DQN_40000_self_play_mid-train (2).pth', 'DQN_60000_self_play_mid-train.pth', 'DQN_top_mid-train (4).pth', 'DQN_95000_self_play_mid-train.pth'])
-    # train_with_DQN(self_play=True)
-    train_with_Q_table(self_play=True)
+    train_with_DQN(self_play=True)
+    # train_with_Q_table(self_play=True)
 
     # file_path='stats.json'
     # with open(file_path, "r", encoding="utf-8") as file:
