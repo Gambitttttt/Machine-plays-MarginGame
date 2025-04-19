@@ -479,7 +479,7 @@ class MarginGame:
                 # total_state.extend(turns_indices)
                 # total_state.extend(player1_money_lead)
                 total_state.extend(aggregated_state)
-        print(total_state)
+        # print(total_state)
         return list(np.array(total_state, dtype = float))
     
     def train_long_memory(self, batch_size, trainer):
