@@ -413,17 +413,45 @@ class MarginGame:
             elif method == 'DQN':
                 # total_state = [0, 1, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0] # ход + индикаторы хода + кооп поля + деньги + история кооп полей
                 # total_state = [0, 0, 0, 0, 1, 1, 1, 0, 0, 0] # ход + кооп поля + деньги + история кооп полей
-                total_state = [0, 0, 0, 0, 0, 0, 0] # ход + все поля
-        else:
+                #            turn last   last last 3 last    aggreg last            
+                total_state = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] # ход + все поля
+        elif turn == 1:
             total_state = [turn/turns_total]
             # turn_start_idx = 1 if turn in [0, 1, 2] else 0
             # turn_end_idx = 1 if turn in [12, 13, 14] else 0
             # turns_indices=[turn_start_idx, turn_end_idx]
-            aggregated_state = [0, 0, 0]
             prev_turn_state = self.states[turn]
             for item in prev_turn_state.keys():
                 if not item in ['Top3 money', 'Field 1', 'Field 2', 'Field 5']: 
                     total_state.append(prev_turn_state[item]['Number of players']/len(self.players.keys()))
+            total_state.extend([0, 0, 0, 0, 0, 0])
+        elif turn == 2:
+            total_state = [turn/turns_total]
+            prev_turn_state = self.states[turn]
+            for item in prev_turn_state.keys():
+                if not item in ['Top3 money', 'Field 1', 'Field 2', 'Field 5']: 
+                    total_state.append(prev_turn_state[item]['Number of players']/len(self.players.keys()))
+            prev_turn_state = self.states[turn-1]
+            for item in prev_turn_state.keys():
+                if not item in ['Top3 money', 'Field 1', 'Field 2', 'Field 5']: 
+                    total_state.append(prev_turn_state[item]['Number of players']/len(self.players.keys()))
+            total_state.extend([0, 0, 0])
+        elif turn >= 3:
+            total_state = [turn/turns_total]
+            prev_turn_state = self.states[turn]
+            for item in prev_turn_state.keys():
+                if not item in ['Top3 money', 'Field 1', 'Field 2', 'Field 5']: 
+                    total_state.append(prev_turn_state[item]['Number of players']/len(self.players.keys()))
+            prev_turn_state = self.states[turn-1]
+            for item in prev_turn_state.keys():
+                if not item in ['Top3 money', 'Field 1', 'Field 2', 'Field 5']: 
+                    total_state.append(prev_turn_state[item]['Number of players']/len(self.players.keys()))
+            prev_turn_state = self.states[turn-2]
+            for item in prev_turn_state.keys():
+                if not item in ['Top3 money', 'Field 1', 'Field 2', 'Field 5']: 
+                    total_state.append(prev_turn_state[item]['Number of players']/len(self.players.keys()))
+        if turn >= 1:
+            aggregated_state = [0, 0, 0]
             for idx in range(1, turn+1):
                 turn_state = self.states[idx]
                 for item in turn_state.keys():
@@ -451,7 +479,7 @@ class MarginGame:
                 # total_state.extend(turns_indices)
                 # total_state.extend(player1_money_lead)
                 total_state.extend(aggregated_state)
-        #print(total_state)
+        print(total_state)
         return list(np.array(total_state, dtype = float))
     
     def train_long_memory(self, batch_size, trainer):
@@ -506,7 +534,8 @@ def initialize_game(
             if id == 1:
                 players[id].action_type = method
             else:
-                action_type = random.choices(['sber_lover', 'lottery_man', 'manufacturer', 'oil_lover', 'gambler', 'cooperator', 'coop_based', 'memory_based', 'Q_table'], weights=[1/16, 1/16, 1/16, 1/16, 1/16, 1/16, 1/16, 1/16, 1/2])[0] # Пока без Q_Table
+                action_type = random.choice(['sber_lover', 'lottery_man', 'manufacturer', 'oil_lover', 'gambler', 'cooperator', 'coop_based', 'memory_based'])
+                # action_type = random.choices(['sber_lover', 'lottery_man', 'manufacturer', 'oil_lover', 'gambler', 'cooperator', 'coop_based', 'memory_based', 'DQN'], weights=[1/16, 1/16, 1/16, 1/16, 1/16, 1/16, 1/16, 1/16, 1/2])[0] # Пока без DQN
                 players[id].action_type = action_type
                 if action_type == 'Q_table':
                     # print('!!!')
@@ -635,8 +664,8 @@ def autonomous_game(n_games, epochs, classes, model, model_name, method, Q_table
             json.dump(customs_stats, file, ensure_ascii=False, indent=4)
 
 def train_with_DQN(self_play):
-    MAX_MEMORY = 50000
-    BATCH_SIZE = 5000
+    MAX_MEMORY = 10000
+    BATCH_SIZE = 128
     LR = 0.1
     EPSILON = 1
     GAMMA = 0.99
@@ -676,10 +705,10 @@ def train_with_DQN(self_play):
                 model.save(file_name=f'DQN_{n_games}_mid-train.pth')
             n_games+=1
     else:
-        SAVE_STEPS=80000
-        POLICY_BUFFER_LEN=15
+        SAVE_STEPS=60000
+        POLICY_BUFFER_LEN=10
         PLAY_VS_LATEST_POLICY_RATIO=0.5
-        SWAP_STEPS=80000
+        SWAP_STEPS=60000
         model_folder = deque(maxlen=POLICY_BUFFER_LEN)
         game = initialize_game(game_class=MarginGame, game_config=game_config, verbose=True, classes='original', method='DQN')
         n_games=1
@@ -829,9 +858,9 @@ def train_with_Q_table(self_play):
             n_games+=1
 
 if __name__ == '__main__':                                                      #Q_table(num_states=11000, num_actions=6)                        
-    # autonomous_game(n_games=10, epochs=50, classes='assessing_trained', model=Q_table(num_states=11000, num_actions=6), model_name='Q_table_without_self_play_40000.npy', method='Q_table',
-    #                 Q_table_models=['Q_table_without_self_play_40000.npy', 'Q_table_top_with_self_play (4).npy'],
-    #                 DQN_models=['DQN_80000_self_play_mid-train.pth', 'DQN_40000_self_play_mid-train (2).pth', 'DQN_60000_self_play_mid-train.pth', 'DQN_top_mid-train (4).pth', 'DQN_95000_self_play_mid-train.pth'])
+    # autonomous_game(n_games=10, epochs=50, classes='assessing_trained', model=Q_table(num_states=11000, num_actions=6), model_name='Q_table_without_self_play_120000.npy', method='Q_table',
+    #                 Q_table_models=['Q_table_mid-train_with_self_play_80000 (1).npy', 'Q_table_top_with_self_play (5).npy', 'Q_table_without_self_play_40000 (1).npy', 'Q_table_without_self_play_120000.npy'],
+    #                 DQN_models=['DQN_top_mid-train (7).pth', 'DQN_20000_self_play_mid-train (4).pth', 'DQN_40000_self_play_mid-train (3).pth'])
     train_with_DQN(self_play=True)
     # train_with_Q_table(self_play=True)
 
@@ -849,6 +878,9 @@ if __name__ == '__main__':                                                      
     #             plt.title(f'Main vs {type}: {metric}')
     #             name=path+f'Main vs {type}_{metric}.png'
     #             plt.savefig(name)
+    # print(np.mean(data['Main']['wins']))
+    # print(np.mean(data['Main']['top3']))
+    # print(np.mean(data['Main']['domination_rounds']))
 
     # file_path='stats.json'
     # with open(file_path, "r", encoding="utf-8") as file:
