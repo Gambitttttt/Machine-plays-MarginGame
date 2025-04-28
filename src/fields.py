@@ -172,8 +172,8 @@ class Manufactory(Field):
 class OilCompany(Field):
     
     name: str='OilCompany'
-    intercept: float=0.5
-    slope: float=2.5
+    intercept: float=0.0
+    slope: float=3.0
     minimum_return_value: float=0.0
     outcome: float=0.0
 
@@ -183,7 +183,7 @@ class OilCompany(Field):
             f"""
             {self.name}
             {color('The revenue formula:', color='yellow')}
-            revenue = max({self.minimum_return_value}, {self.slope} x total_amount_of_investors + {self.intercept}) x invested_money 
+            revenue = max({self.minimum_return_value}, {self.slope} / total_amount_of_investors + {self.intercept}) x invested_money 
             """
         )
     
