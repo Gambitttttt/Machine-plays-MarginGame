@@ -85,16 +85,17 @@ class Player:
                 if self.action_type == 'coop_based':
                     # print(states)
                     if len(list(states.keys())) == 1:
-                        action = Action(field_id=5, money_invested=float(inf))
+                        field_num = random.choice([1, 2, 5])
+                        action = Action(field_id=field_num, money_invested=float(inf))
                     else:
                         key = list(states.keys())[-2]
                         state = states[key]
                         # print(state)
-                        if state['Field 4']['Number of players'] == 0: 
-                            action = Action(field_id=4, money_invested=float(inf))
-                        elif 2 <= state['Field 6']['Number of players'] <= 3:
+                        if state['Field 6']['Number of players'] == 3 or (state['Field 6']['Number of players'] == 4 and self.history[-1].field_id == 6):
                             action = Action(field_id=6, money_invested=float(inf))
-                        elif state['Field 3']['Number of players'] <= 2:
+                        elif state['Field 4']['Number of players'] == 0 or (state['Field 4']['Number of players'] == 1 and self.history[-1].field_id == 4): 
+                            action = Action(field_id=4, money_invested=float(inf))
+                        elif state['Field 3']['Number of players'] <= 2 or (state['Field 3']['Number of players'] == 3 and self.history[-1].field_id == 3):
                             action = Action(field_id=3, money_invested=float(inf))
                         else:
                             field_num = random.choice([1, 2, 5])

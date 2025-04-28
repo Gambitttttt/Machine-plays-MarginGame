@@ -480,6 +480,8 @@ class MarginGame:
                 # total_state.extend(player1_money_lead)
                 total_state.extend(aggregated_state)
         # print(total_state)
+        if not method in ['DQN', 'Q_table']:
+            total_state = []
         return list(np.array(total_state, dtype = float))
     
     def train_long_memory(self, batch_size, trainer):
@@ -534,8 +536,8 @@ def initialize_game(
             if id == 1:
                 players[id].action_type = method
             else:
-                # action_type = random.choice(['sber_lover', 'lottery_man', 'manufacturer', 'oil_lover', 'gambler', 'cooperator', 'coop_based', 'memory_based'])
-                action_type = random.choices(['sber_lover', 'lottery_man', 'manufacturer', 'oil_lover', 'gambler', 'cooperator', 'coop_based', 'memory_based', 'DQN'], weights=[1/16, 1/16, 1/16, 1/16, 1/16, 1/16, 1/16, 1/16, 1/2])[0] # Пока без DQN
+                action_type = random.choice(['sber_lover', 'lottery_man', 'manufacturer', 'oil_lover', 'gambler', 'cooperator', 'coop_based', 'memory_based'])
+                # action_type = random.choices(['sber_lover', 'lottery_man', 'manufacturer', 'oil_lover', 'gambler', 'cooperator', 'coop_based', 'memory_based', 'DQN'], weights=[1/16, 1/16, 1/16, 1/16, 1/16, 1/16, 1/16, 1/16, 1/2])[0] # Пока без DQN
                 players[id].action_type = action_type
                 if action_type == 'Q_table':
                     # print('!!!')
@@ -766,7 +768,7 @@ def train_with_Q_table(self_play):
     LR = 0.1
     EPSILON = 1
     GAMMA = 0.99
-    DECAY = 100000
+    DECAY = 800000
 
     plot_scores = []
     plot_mean_scores = []
@@ -798,7 +800,7 @@ def train_with_Q_table(self_play):
             mean_score = total_score / n_games
             plot_mean_scores.append(mean_score)
             plot(plot_scores, plot_mean_scores)
-            if n_games % 20000 == 0:
+            if n_games % 40000 == 0:
                 model.save(name=f'Q_table_without_self_play_{n_games}.npy')
             n_games+=1
     else:
@@ -858,7 +860,7 @@ def train_with_Q_table(self_play):
             n_games+=1
 
 if __name__ == '__main__':                                                      #Q_table(num_states=11000, num_actions=6)                        
-    # autonomous_game(n_games=20, epochs=100, classes='assessing_trained', model=DQN(), model_name='DQN_160000_self_play_mid-train (1).pth', method='DQN',
+    # autonomous_game(n_games=20, epochs=200, classes='assessing_trained', model=Q_table(num_states=11000, num_actions=6), model_name='Q_table_without_self_play_600000.npy', method='coop_based',
     #                 Q_table_models=['Q_table_mid-train_with_self_play_80000 (1).npy', 'Q_table_top_with_self_play (5).npy', 'Q_table_without_self_play_40000 (1).npy', 'Q_table_without_self_play_120000.npy'],
     #                 DQN_models=['DQN_top_mid-train.pth', 'DQN_160000_self_play_mid-train (1).pth', 'DQN_60000_self_play_mid-train.pth', 'DQN_120000_self_play_mid-train.pth'])
     # train_with_DQN(self_play=True)
