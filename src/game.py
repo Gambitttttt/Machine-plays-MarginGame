@@ -403,18 +403,18 @@ class MarginGame:
 
     def return_total_state(self, turn, turns_total, method):
         if turn == 0:
-            if method == 'Q_table':
-                total_state = [0, 0, 0, 0]    
-            # total_state = [1/turns_total, 0, 0, 0, 0, 0, 0]
-            # total_state = [0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0] # ход + все поля + деньги + история всех полей
-            # total_state = [0, 0, 0, 0, 0, 0, 0] # ход + все поля
-            # total_state = [0, 0, 0, 0] # ход + кооп поля
-            # total_state = [0, 0, 0, 0, 1, 1, 1, 0, 0, 0] # ход + кооп поля + деньги + история кооп полей
-            elif method == 'DQN':
+            # if method == 'Q_table':
+            #     total_state = [0, 0, 0, 0]    
+            # # total_state = [1/turns_total, 0, 0, 0, 0, 0, 0]
+            # # total_state = [0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0] # ход + все поля + деньги + история всех полей
+            # # total_state = [0, 0, 0, 0, 0, 0, 0] # ход + все поля
+            # # total_state = [0, 0, 0, 0] # ход + кооп поля
+            # # total_state = [0, 0, 0, 0, 1, 1, 1, 0, 0, 0] # ход + кооп поля + деньги + история кооп полей
+            # elif method == 'DQN':
                 # total_state = [0, 1, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0] # ход + индикаторы хода + кооп поля + деньги + история кооп полей
                 # total_state = [0, 0, 0, 0, 1, 1, 1, 0, 0, 0] # ход + кооп поля + деньги + история кооп полей
                 #            turn last   last last 3 last    aggreg last            
-                total_state = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] # ход + все поля
+            total_state = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] # ход + все поля
         elif turn == 1:
             total_state = [turn/turns_total]
             # turn_start_idx = 1 if turn in [0, 1, 2] else 0
@@ -475,10 +475,10 @@ class MarginGame:
             #         player1_money_lead.append(100)
             #     else:
             #         player1_money_lead.append(self.players[1].money / top3_money[i])
-            if method == 'DQN':
+            # if method == 'DQN':
                 # total_state.extend(turns_indices)
                 # total_state.extend(player1_money_lead)
-                total_state.extend(aggregated_state)
+            total_state.extend(aggregated_state)
         # print(total_state)
         if not method in ['DQN', 'Q_table']:
             total_state = []
@@ -671,7 +671,7 @@ def train_with_DQN(self_play):
     LR = 0.1
     EPSILON = 1
     GAMMA = 0.99
-    DECAY = 80000
+    DECAY = 800000
 
     plot_scores = []
     plot_mean_scores = []
@@ -704,7 +704,7 @@ def train_with_DQN(self_play):
             plot_mean_scores.append(mean_score)
             plot(plot_scores, plot_mean_scores)
             if n_games % 40000 == 0:
-                model.save(file_name=f'DQN_{n_games}_mid-train.pth')
+                model.save(file_name=f'DQN_{n_games}_without_self-play_mid-train.pth')
             n_games+=1
     else:
         SAVE_STEPS=60000
@@ -863,8 +863,8 @@ if __name__ == '__main__':                                                      
     # autonomous_game(n_games=20, epochs=200, classes='assessing_trained', model=Q_table(num_states=11000, num_actions=6), model_name='Q_table_without_self_play_600000.npy', method='coop_based',
     #                 Q_table_models=['Q_table_mid-train_with_self_play_80000 (1).npy', 'Q_table_top_with_self_play (5).npy', 'Q_table_without_self_play_40000 (1).npy', 'Q_table_without_self_play_120000.npy'],
     #                 DQN_models=['DQN_top_mid-train.pth', 'DQN_160000_self_play_mid-train (1).pth', 'DQN_60000_self_play_mid-train.pth', 'DQN_120000_self_play_mid-train.pth'])
-    # train_with_DQN(self_play=True)
-    train_with_Q_table(self_play=False)
+    train_with_DQN(self_play=False)
+    # train_with_Q_table(self_play=False)
 
     # file_path='stats.json'
     # with open(file_path, "r", encoding="utf-8") as file:
