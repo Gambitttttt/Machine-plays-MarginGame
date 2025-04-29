@@ -32,10 +32,11 @@ class DQN(nn.Module):
         self.load_state_dict(torch.load(file_name))
         
 class trainer():
-    def __init__(self, model, lr, gamma):
+    def __init__(self, model, lr, gamma, target_model):
         self.model = model
         self.lr = lr
         self.gamma = gamma
+        self.target_model = target_model
         self.optimizer = optim.Adam(model.parameters(), lr = self.lr)
         self.criterion = nn.MSELoss()
 
@@ -44,34 +45,78 @@ class trainer():
         action = torch.tensor(action, dtype = torch.float)
         reward = torch.tensor(reward, dtype = torch.float)
         next_state = torch.tensor(next_state, dtype = torch.float)
-
+        done = torch.tensor(done, dtype = torch.float)
+        print(state)
+        print(f'DONE: {done}')
         if len(state.shape) == 1:
             # (1, x)
             state = torch.unsqueeze(state, 0)
             next_state = torch.unsqueeze(next_state, 0)
             action = torch.unsqueeze(action, 0)
             reward = torch.unsqueeze(reward, 0)
-            done = (done, )
-
+            done = torch.unsqueeze(done, 0)
+            # done = (done, )
+        print(state)
         pred = self.model(state)
-        target = pred.clone()
-        for idx in range(len(done)):
-            Q_new = reward[idx]
-            if not done[idx]:
-                Q_new = reward[idx] + self.gamma * torch.max(self.model(next_state[idx]))
+        actual_actions = torch.argmax(action, dim = 1).unsqueeze(1)
+        print(f'PRED: {pred}')
+        print(f'ACTIONS: {action}')
+        print(f'ACTIONS_INDICES: {actual_actions}')
+        Q_pred = pred.gather(1, actual_actions)
+        print(f'Q_PRED: {Q_pred}')
+        # target = pred.clone().detach()
+        # for idx in range(len(done)):
+        #     Q_new = reward[idx]
+        #     if not done[idx]:
+        #         with torch.no_grad():
+        #             Q_new = reward[idx] + self.gamma * torch.max(self.target_model(next_state[idx]))
 
-            target[idx][torch.argmax(action[idx]).item()] = Q_new
-    
-        # Q_new = reward
+            # target[idx][torch.argmax(action[idx]).item()] = Q_new
 
-        # 2: Q_new = r + y * max(next_predicted Q value) -> only do this if not done
-        # pred.clone()
-        # preds[argmax(action)] = Q_new
+        with torch.no_grad():
+            print(f'Target_model from next_state: {self.target_model(next_state)}')
+            next_q_values = self.target_model(next_state).max(1, keepdim=True)[0]
+            print(f'Наилучшие действия: {next_q_values}')
+            print(f'REWARD: {reward.unsqueeze(1)}')
+            print(f'1 - DONE: {1-done}')
+            target_q_values = reward.unsqueeze(1) + (1 - done).unsqueeze(1) * self.gamma * next_q_values
+            print(f'TARGET_Q_VALS: {target_q_values}')
+
+        # # Q_new = reward
+
+        # # 2: Q_new = r + y * max(next_predicted Q value) -> only do this if not done
+        # # pred.clone()
+        # # preds[argmax(action)] = Q_new
+        # print(f'Target: {target_q_values}')
+        # print(f'Pred: {pred}')
         self.optimizer.zero_grad()
-        loss = self.criterion(target, pred)
+        loss = self.criterion(target_q_values, Q_pred)
         loss.backward()
-
         self.optimizer.step()
+
+        # state = torch.tensor(state, dtype = torch.float)
+        # action = torch.tensor(action, dtype = torch.float)
+        # reward = torch.tensor(reward, dtype = torch.float)
+        # next_state = torch.tensor(next_state, dtype = torch.float)
+        # print(state)
+        # if len(state.shape) == 1:
+        #     # (1, x)
+        #     state = torch.unsqueeze(state, 0)
+        #     next_state = torch.unsqueeze(next_state, 0)
+        #     action = torch.unsqueeze(action, 0)
+        #     reward = torch.unsqueeze(reward, 0)
+        #     done = (done, )
+
+        # q_values = self.model(state).gather(1, action)
+
+        # with torch.no_grad():
+        #     next_q_values = self.target_model(next_state).max(1, keepdim=True)[0]
+        #     target_q_values = reward + (1 - done) * self.gamma * next_q_values
+
+        # self.optimizer.zero_grad()
+        # loss = self.criterion(q_values, target_q_values)
+        # loss.backward()
+        # self.optimizer.step()
         
 class Q_table():
     def __init__(self, num_states, num_actions):
