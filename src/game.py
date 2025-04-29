@@ -96,7 +96,7 @@ class MarginGame:
         self.fields = fields
         self.players = players
         self.n_iterations = n_iterations
-        self.replay_buffer = deque(maxlen=20480)
+        self.replay_buffer = deque(maxlen=10000)
         
     def _get_last_players_actions(self) -> PlayersActions:
         players_last_actions = {}
@@ -230,14 +230,14 @@ class MarginGame:
             self.define_domination(iteration=i, end_iteration=self.n_iterations)
             self.recompute_state(n_iteration = i, last_actions=last_actions)
             new_state = self.return_total_state(turn = i, turns_total=self.n_iterations, method='DQN')
-            reward = self.players[1].money
-            # reward = self.fields[field_for_training].return_rate()
-            if self.players[1].leading_role == 1:
-                reward *= 1.1
+            # reward = self.players[1].money
+            reward = self.fields[field_for_training].return_rate()
+            # if self.players[1].leading_role == 1:
+                # reward *= 1.1
             if i==self.n_iterations:
                 done = 1
-                if self.players[1].money in self.cur_top3_money:
-                    reward *= (1 + 0.1 * (self.cur_top3_money.index(self.players[1].money) + 1))
+                # if self.players[1].money in self.cur_top3_money:
+                #     reward *= (1 + 0.1 * (self.cur_top3_money.index(self.players[1].money) + 1))
                     # reward += 50 * (self.cur_top3_money.index(self.players[1].money) + 1)
             self.replay_buffer.append((old_state, action_for_training, reward, new_state, done))
             # print(f'Old state: {old_state}')
@@ -266,15 +266,15 @@ class MarginGame:
             self.define_domination(iteration=i, end_iteration=self.n_iterations)
             self.recompute_state(n_iteration = i, last_actions=last_actions)
             new_state = self.return_total_state(turn = i, turns_total=self.n_iterations, method='Q_table')
-            reward = self.players[1].money
-            # reward = self.fields[field_for_training].return_rate()
-            if self.players[1].leading_role == 1:
-                reward *= 1.1
+            # reward = self.players[1].money
+            reward = self.fields[field_for_training].return_rate()
+            # if self.players[1].leading_role == 1:
+            #     reward *= 1.1
             if i==self.n_iterations:
                 done = 1
-                if self.players[1].money in self.cur_top3_money:
-                    reward *= (1 + 0.1 * (self.cur_top3_money.index(self.players[1].money) + 1))
-                    # reward += 50 * (self.cur_top3_money.index(self.players[1].money) + 1)
+                # if self.players[1].money in self.cur_top3_money:
+                #     reward *= (1 + 0.1 * (self.cur_top3_money.index(self.players[1].money) + 1))
+                #     # reward += 50 * (self.cur_top3_money.index(self.players[1].money) + 1)
             trainer.train_step(state=old_state, action=action_for_training, reward=reward, next_state=new_state, done=done)
             self.update_memory()
 
@@ -666,7 +666,6 @@ def autonomous_game(n_games, epochs, classes, model, model_name, method, Q_table
             json.dump(customs_stats, file, ensure_ascii=False, indent=4)
 
 def train_with_DQN(self_play):
-    MAX_MEMORY = 10000
     BATCH_SIZE = 128
     LR = 0.1
     EPSILON = 1
@@ -681,12 +680,20 @@ def train_with_DQN(self_play):
     args = parse_args()
     game_config = read_game_config(config_path=args.config_path)
 
-    model = DQN()    
-    DQN_trainer = trainer(model=model, lr=LR, gamma=GAMMA)
+    model = DQN()
+    target_model = DQN()   
+    target_model.load_state_dict(model.state_dict())
+    target_model.eval()
+    DQN_trainer = trainer(model=model, lr=LR, gamma=GAMMA, target_model=target_model)
 
     if not self_play:
         n_games=1
         while True:
+            if n_games % 1000 == 0:
+                target_model.load_state_dict(model.state_dict())
+                target_model.eval()
+                DQN_trainer = trainer(model=model, lr=LR, gamma=GAMMA, target_model=target_model)
+
             game = initialize_game(game_class=MarginGame, game_config=game_config, verbose=True, classes='original', method='DQN')
             game.run_training_games_DQN(batch_size=BATCH_SIZE, epsilon=EPSILON, decay=DECAY, n_games=n_games, trainer=DQN_trainer, model=model, trained_models=[])
 
@@ -715,6 +722,11 @@ def train_with_DQN(self_play):
         game = initialize_game(game_class=MarginGame, game_config=game_config, verbose=True, classes='original', method='DQN')
         n_games=1
         while True:
+            if n_games % 1000 == 0:
+                target_model.load_state_dict(model.state_dict())
+                target_model.eval()
+                DQN_trainer = trainer(model=model, lr=LR, gamma=GAMMA, target_model=target_model)    
+
             if n_games % SAVE_STEPS == 0:
                 name=f'DQN_{n_games}_self_play_mid-train.pth'
                 model.save(file_name=name)
@@ -863,8 +875,8 @@ if __name__ == '__main__':                                                      
     # autonomous_game(n_games=20, epochs=200, classes='assessing_trained', model=Q_table(num_states=11000, num_actions=6), model_name='Q_table_without_self_play_600000.npy', method='coop_based',
     #                 Q_table_models=['Q_table_mid-train_with_self_play_80000 (1).npy', 'Q_table_top_with_self_play (5).npy', 'Q_table_without_self_play_40000 (1).npy', 'Q_table_without_self_play_120000.npy'],
     #                 DQN_models=['DQN_top_mid-train.pth', 'DQN_160000_self_play_mid-train (1).pth', 'DQN_60000_self_play_mid-train.pth', 'DQN_120000_self_play_mid-train.pth'])
-    train_with_DQN(self_play=False)
-    # train_with_Q_table(self_play=False)
+    # train_with_DQN(self_play=False)
+    train_with_Q_table(self_play=False)
 
     # file_path='stats.json'
     # with open(file_path, "r", encoding="utf-8") as file:
