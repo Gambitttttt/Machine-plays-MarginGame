@@ -212,7 +212,7 @@ class MarginGame:
         print(f'\nBasic metric for player 1: {basic_metric(dict=self.players, id = 1)}')
         print(f'\nDiscounted metric for player 1: {discounted_metric(dict=self.players, id = 1, discount=0.5)}')
 
-    def run_training_games_DQN(self, batch_size, epsilon, decay, n_games, trainer, model, trained_models=[]) -> t.Dict[int, float]:
+    def run_training_games_DQN(self, batch_size, epsilon, decay, n_games, trainer, model, replay_buffer, trained_models=[]) -> t.Dict[int, float]:
         done=0
         self.init_states()
         for player_id, player in self.players.items():
@@ -239,15 +239,15 @@ class MarginGame:
                 # if self.players[1].money in self.cur_top3_money:
                 #     reward *= (1 + 0.1 * (self.cur_top3_money.index(self.players[1].money) + 1))
                     # reward += 50 * (self.cur_top3_money.index(self.players[1].money) + 1)
-            self.replay_buffer.append((old_state, action_for_training, reward, new_state, done))
+            replay_buffer.append((old_state, action_for_training, reward, new_state, done))
             # print(f'Old state: {old_state}')
             # print(f'new state: {new_state}')
             # print(f'Reward: {reward}')
             # print(f'Action: {action_for_training}')
             # print(f'Done: {done}')
-            self.train_short_memory(state=old_state, action=last_actions[0], reward=reward, next_state=new_state, trainer=trainer, done=done)
+            self.train_short_memory(state=old_state, action=action_for_training, reward=reward, next_state=new_state, trainer=trainer, done=done)
             self.update_memory()
-        self.train_long_memory(batch_size=batch_size, trainer=trainer)
+        self.train_long_memory(batch_size=batch_size, trainer=trainer, replay_buffer=replay_buffer)
 
     def run_training_games_Q_table(self, epsilon, decay, n_games, trainer, model, trained_models=[]):
         done=0
@@ -484,11 +484,11 @@ class MarginGame:
             total_state = []
         return list(np.array(total_state, dtype = float))
     
-    def train_long_memory(self, batch_size, trainer):
-        if len(self.replay_buffer) > batch_size:
-            mini_sample = random.sample(self.replay_buffer, batch_size)
+    def train_long_memory(self, batch_size, trainer, replay_buffer):
+        if len(replay_buffer) > batch_size:
+            mini_sample = random.sample(replay_buffer, batch_size)
         else:
-            mini_sample = self.replay_buffer
+            mini_sample = replay_buffer
         states, actions, rewards, next_states, dones = zip(*mini_sample)
         trainer.train_step(states, actions, rewards, next_states, dones)
 
@@ -667,10 +667,12 @@ def autonomous_game(n_games, epochs, classes, model, model_name, method, Q_table
 
 def train_with_DQN(self_play):
     BATCH_SIZE = 128
+    REPLAY_BUFFER_LEN = 10000
     LR = 0.1
     EPSILON = 1
     GAMMA = 0.99
     DECAY = 800000
+    replay_buffer = deque(maxlen=REPLAY_BUFFER_LEN)
 
     plot_scores = []
     plot_mean_scores = []
@@ -695,7 +697,7 @@ def train_with_DQN(self_play):
                 DQN_trainer = trainer(model=model, lr=LR, gamma=GAMMA, target_model=target_model)
 
             game = initialize_game(game_class=MarginGame, game_config=game_config, verbose=True, classes='original', method='DQN')
-            game.run_training_games_DQN(batch_size=BATCH_SIZE, epsilon=EPSILON, decay=DECAY, n_games=n_games, trainer=DQN_trainer, model=model, trained_models=[])
+            game.run_training_games_DQN(batch_size=BATCH_SIZE, epsilon=EPSILON, decay=DECAY, n_games=n_games, trainer=DQN_trainer, model=model, trained_models=[], replay_buffer=replay_buffer)
 
             score=basic_metric(dict=game.players, id = 1)
             
@@ -756,7 +758,7 @@ def train_with_DQN(self_play):
             if len(model_folder) == 0:
                 models_samples = []
 
-            game.run_training_games_DQN(batch_size=BATCH_SIZE, epsilon=EPSILON, decay=DECAY, n_games=n_games % SAVE_STEPS, trainer=DQN_trainer, model=model, trained_models=models_samples)
+            game.run_training_games_DQN(batch_size=BATCH_SIZE, epsilon=EPSILON, decay=DECAY, n_games=n_games % SAVE_STEPS, trainer=DQN_trainer, model=model, trained_models=models_samples, replay_buffer=replay_buffer)
             
             score=basic_metric(dict=game.players, id = 1)
             if score > top_score:
@@ -875,8 +877,8 @@ if __name__ == '__main__':                                                      
     # autonomous_game(n_games=20, epochs=200, classes='assessing_trained', model=Q_table(num_states=11000, num_actions=6), model_name='Q_table_without_self_play_600000.npy', method='coop_based',
     #                 Q_table_models=['Q_table_mid-train_with_self_play_80000 (1).npy', 'Q_table_top_with_self_play (5).npy', 'Q_table_without_self_play_40000 (1).npy', 'Q_table_without_self_play_120000.npy'],
     #                 DQN_models=['DQN_top_mid-train.pth', 'DQN_160000_self_play_mid-train (1).pth', 'DQN_60000_self_play_mid-train.pth', 'DQN_120000_self_play_mid-train.pth'])
-    # train_with_DQN(self_play=False)
-    train_with_Q_table(self_play=False)
+    train_with_DQN(self_play=False)
+    # train_with_Q_table(self_play=False)
 
     # file_path='stats.json'
     # with open(file_path, "r", encoding="utf-8") as file:
