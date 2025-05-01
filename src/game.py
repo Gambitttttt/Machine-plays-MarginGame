@@ -73,7 +73,10 @@ from model import(
 )
 
 from visualizer_train import(
-    plot
+    plot,
+    vis_grad,
+    vis_loss,
+    vis_loss_grad
 )
 
 def parse_args():
@@ -224,9 +227,10 @@ class MarginGame:
             self.recompute_revenues()
             last_actions = get_players_last_actions(players = self.players)
             field_for_training = last_actions[0]
+            action_for_training = field_for_training-1
             # print(f'Trainee chose field {field_for_training}')
-            action_for_training = [0, 0, 0, 0, 0, 0]
-            action_for_training[field_for_training-1]+=1
+            # action_for_training = [0, 0, 0, 0, 0, 0]
+            # action_for_training[field_for_training-1]+=1
             self.define_domination(iteration=i, end_iteration=self.n_iterations)
             self.recompute_state(n_iteration = i, last_actions=last_actions)
             new_state = self.return_total_state(turn = i, turns_total=self.n_iterations, method='DQN')
@@ -667,11 +671,11 @@ def autonomous_game(n_games, epochs, classes, model, model_name, method, Q_table
 
 def train_with_DQN(self_play):
     BATCH_SIZE = 128
-    REPLAY_BUFFER_LEN = 10000
-    LR = 0.1
+    REPLAY_BUFFER_LEN = 50000
+    LR = 0.001
     EPSILON = 1
-    GAMMA = 0.99
-    DECAY = 800000
+    GAMMA = 0.95 # 0.99
+    DECAY = 40000 # 800000
     replay_buffer = deque(maxlen=REPLAY_BUFFER_LEN)
 
     plot_scores = []
@@ -691,10 +695,11 @@ def train_with_DQN(self_play):
     if not self_play:
         n_games=1
         while True:
-            if n_games % 1000 == 0:
-                target_model.load_state_dict(model.state_dict())
-                target_model.eval()
-                DQN_trainer = trainer(model=model, lr=LR, gamma=GAMMA, target_model=target_model)
+            # if n_games % 1000 == 0:
+            #     target_model.load_state_dict(model.state_dict())
+            #     target_model.eval()
+            #     # DQN_trainer = trainer(model=model, lr=LR, gamma=GAMMA, target_model=target_model)
+            #     DQN_trainer.target_model = target_model
 
             game = initialize_game(game_class=MarginGame, game_config=game_config, verbose=True, classes='original', method='DQN')
             game.run_training_games_DQN(batch_size=BATCH_SIZE, epsilon=EPSILON, decay=DECAY, n_games=n_games, trainer=DQN_trainer, model=model, trained_models=[], replay_buffer=replay_buffer)
@@ -707,27 +712,32 @@ def train_with_DQN(self_play):
 
             print('Game', n_games, 'Score', score, 'Top score:', top_score)
 
-            plot_scores.append(score)
-            total_score += score
-            mean_score = total_score / n_games
-            plot_mean_scores.append(mean_score)
-            plot(plot_scores, plot_mean_scores)
-            if n_games % 40000 == 0:
+            # plot_scores.append(score)
+            # total_score += score
+            # mean_score = total_score / n_games
+            # plot_mean_scores.append(mean_score)
+            # plot(plot_scores, plot_mean_scores)
+            # vis_loss(trainer=DQN_trainer)
+            # vis_grad(trainer=DQN_trainer)
+            if n_games % 50000 == 0:
+                vis_loss_grad(trainer=DQN_trainer)
+            # vis_loss_grad(trainer=DQN_trainer)
+            if n_games % 10000 == 0:
                 model.save(file_name=f'DQN_{n_games}_without_self-play_mid-train.pth')
             n_games+=1
     else:
-        SAVE_STEPS=60000
+        SAVE_STEPS=20000
         POLICY_BUFFER_LEN=10
         PLAY_VS_LATEST_POLICY_RATIO=0.5
-        SWAP_STEPS=60000
+        SWAP_STEPS=20000
         model_folder = deque(maxlen=POLICY_BUFFER_LEN)
         game = initialize_game(game_class=MarginGame, game_config=game_config, verbose=True, classes='original', method='DQN')
         n_games=1
         while True:
-            if n_games % 1000 == 0:
-                target_model.load_state_dict(model.state_dict())
-                target_model.eval()
-                DQN_trainer = trainer(model=model, lr=LR, gamma=GAMMA, target_model=target_model)    
+            # if n_games % 1000 == 0:
+            #     target_model.load_state_dict(model.state_dict())
+            #     target_model.eval()
+            #     DQN_trainer = trainer(model=model, lr=LR, gamma=GAMMA, target_model=target_model)    
 
             if n_games % SAVE_STEPS == 0:
                 name=f'DQN_{n_games}_self_play_mid-train.pth'
@@ -761,21 +771,23 @@ def train_with_DQN(self_play):
             game.run_training_games_DQN(batch_size=BATCH_SIZE, epsilon=EPSILON, decay=DECAY, n_games=n_games % SAVE_STEPS, trainer=DQN_trainer, model=model, trained_models=models_samples, replay_buffer=replay_buffer)
             
             score=basic_metric(dict=game.players, id = 1)
-            if score > top_score:
-                    top_score = score
-                    model.save(file_name='DQN_top_mid-train.pth')
+            # if score > top_score:
+            #         top_score = score
+            #         model.save(file_name='DQN_top_mid-train.pth')
 
-            if n_games % 20000 == 0:
+            if n_games % 10000 == 0:
                 name=f'DQN_{n_games}_self_play_mid-train.pth'
                 model.save(file_name=name)
 
+            if n_games % 20000 == 0:
+                vis_loss_grad(trainer=DQN_trainer, n_games=n_games)
             print('Game', n_games, 'Score', score, 'Top score:', top_score)
 
-            plot_scores.append(score)
-            total_score += score
-            mean_score = total_score / n_games
-            plot_mean_scores.append(mean_score)
-            plot(plot_scores, plot_mean_scores)
+            # plot_scores.append(score)
+            # total_score += score
+            # mean_score = total_score / n_games
+            # plot_mean_scores.append(mean_score)
+            # plot(plot_scores, plot_mean_scores)
             n_games+=1
 
 def train_with_Q_table(self_play):
@@ -809,11 +821,11 @@ def train_with_Q_table(self_play):
 
             print('Game', n_games, 'Score', score, 'Top score:', top_score)
 
-            plot_scores.append(score)
-            total_score += score
-            mean_score = total_score / n_games
-            plot_mean_scores.append(mean_score)
-            plot(plot_scores, plot_mean_scores)
+            # plot_scores.append(score)
+            # total_score += score
+            # mean_score = total_score / n_games
+            # plot_mean_scores.append(mean_score)
+            # plot(plot_scores, plot_mean_scores)
             if n_games % 40000 == 0:
                 model.save(name=f'Q_table_without_self_play_{n_games}.npy')
             n_games+=1
@@ -874,10 +886,10 @@ def train_with_Q_table(self_play):
             n_games+=1
 
 if __name__ == '__main__':                                                      #Q_table(num_states=11000, num_actions=6)                        
-    # autonomous_game(n_games=20, epochs=200, classes='assessing_trained', model=Q_table(num_states=11000, num_actions=6), model_name='Q_table_without_self_play_600000.npy', method='coop_based',
+    # autonomous_game(n_games=10, epochs=100, classes='assessing_trained', model=DQN(), model_name='DQN_10000_without_self-play_mid-train.pth', method='DQN',
     #                 Q_table_models=['Q_table_mid-train_with_self_play_80000 (1).npy', 'Q_table_top_with_self_play (5).npy', 'Q_table_without_self_play_40000 (1).npy', 'Q_table_without_self_play_120000.npy'],
     #                 DQN_models=['DQN_top_mid-train.pth', 'DQN_160000_self_play_mid-train (1).pth', 'DQN_60000_self_play_mid-train.pth', 'DQN_120000_self_play_mid-train.pth'])
-    train_with_DQN(self_play=False)
+    train_with_DQN(self_play=True)
     # train_with_Q_table(self_play=False)
 
     # file_path='stats.json'

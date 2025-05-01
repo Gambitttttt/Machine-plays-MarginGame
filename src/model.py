@@ -2,19 +2,20 @@ import torch
 import numpy as np
 import torch.nn.functional as F
 from torch import nn, optim
+import matplotlib.pyplot as plt
 import os
 
 class DQN(nn.Module):
     def __init__(self):
         super().__init__()
-        self.fc1 = nn.Linear(13, 169)
+        self.fc1 = nn.Linear(13, 64)
         # self.fc2 = nn.Linear(169, 169)
-        self.fc3 = nn.Linear(169, 6)
+        self.fc3 = nn.Linear(64, 6)
 
     
     def forward(self, x):
-        x = F.relu(self.fc1(x))
-        # x = F.relu(self.fc2(x))
+        x = F.leaky_relu(self.fc1(x))
+        # x = F.leaky_relu(self.fc2(x))
         x = self.fc3(x)
         return x
     
@@ -38,16 +39,20 @@ class trainer():
         self.gamma = gamma
         self.target_model = target_model
         self.optimizer = optim.Adam(model.parameters(), lr = self.lr)
-        self.criterion = nn.MSELoss()
+        # self.criterion = nn.MSELoss()
+        self.criterion = nn.L1Loss()
+        self.step = 0
+        self.loss_log = []
+        self.grad_log = []
+        self.grad_stats_log = []
+
 
     def train_step(self, state, action, reward, next_state, done):
         state = torch.tensor(state, dtype = torch.float)
-        action = torch.tensor(action, dtype = torch.float)
+        action = torch.tensor(action, dtype = torch.int64)
         reward = torch.tensor(reward, dtype = torch.float)
         next_state = torch.tensor(next_state, dtype = torch.float)
         done = torch.tensor(done, dtype = torch.float)
-        print(state)
-        print(f'DONE: {done}')
         if len(state.shape) == 1:
             # (1, x)
             state = torch.unsqueeze(state, 0)
@@ -56,14 +61,24 @@ class trainer():
             reward = torch.unsqueeze(reward, 0)
             done = torch.unsqueeze(done, 0)
             # done = (done, )
-        print(state)
+        # print(f'STATE: {state}')
+        # print(f'NEXT_STATE: {next_state}')
+        # print(f'DONE: {done}')
         pred = self.model(state)
-        actual_actions = torch.argmax(action, dim = 1).unsqueeze(1)
-        print(f'PRED: {pred}')
-        print(f'ACTIONS: {action}')
-        print(f'ACTIONS_INDICES: {actual_actions}')
-        Q_pred = pred.gather(1, actual_actions)
-        print(f'Q_PRED: {Q_pred}')
+        # actual_actions = action
+        # actual_actions = torch.argmax(action, dim = 1).unsqueeze(1)
+        # print(f'PRED: {pred}')
+        # print('-'*100)
+        # print(f'STATE SHAPE: {state.shape}')
+        # print("State sample:", state[0])
+        # print("Pred sample:", pred[0])
+        # print('-'*100)
+        action = torch.unsqueeze(action, 1)
+        # print(f'ACTIONS: {action}')
+        # print(f'REWARD: {reward.unsqueeze(1)}')
+        # print(f'ACTIONS_INDICES: {actual_actions}')
+        Q_pred = pred.gather(1, action)
+        # print(f'Q_PRED: {Q_pred}')
         # target = pred.clone().detach()
         # for idx in range(len(done)):
         #     Q_new = reward[idx]
@@ -74,14 +89,87 @@ class trainer():
             # target[idx][torch.argmax(action[idx]).item()] = Q_new
 
         with torch.no_grad():
-            print(f'Target_model from next_state: {self.target_model(next_state)}')
-            next_q_values = self.target_model(next_state).max(1, keepdim=True)[0]
-            print(f'Наилучшие действия: {next_q_values}')
-            print(f'REWARD: {reward.unsqueeze(1)}')
-            print(f'1 - DONE: {1-done}')
-            target_q_values = reward.unsqueeze(1) + (1 - done).unsqueeze(1) * self.gamma * next_q_values
-            print(f'TARGET_Q_VALS: {target_q_values}')
+            # print(f'Target_model from next_state: {self.target_model(next_state)}')
+            
+            # next_q_values = self.target_model(next_state).max(1, keepdim=True)[0]              # Без DDQN
+            next_actions = self.model(next_state).argmax(dim=1, keepdim=True)  # Основная сеть выбирает действие + затем DDQN
+            next_q_values = self.target_model(next_state).gather(1, next_actions)     # DDQN
 
+            # print(f'Наилучшие действия: {next_q_values}')
+            # print(f'REWARD: {reward.unsqueeze(1)}')
+            # print(f'1 - DONE: {1-done}')
+            target_q_values = torch.unsqueeze(reward, 1) + torch.unsqueeze((1 - done),1) * self.gamma * next_q_values
+            # print(f'TARGET_Q_VALS: {target_q_values}')
+
+        # print("\n=== TRAIN STEP ===")
+        # print(f"State sample: {state[0].numpy()}")
+        # print(f"Predicted Q-values: {pred[0].detach().numpy()}")
+        # print(f"Chosen action: {action[0].item()}, Q_pred: {Q_pred[0].item()}")
+        # print(f"Target Q-value: {target_q_values[0].item()}")
+        # print(f"Loss: {self.criterion(Q_pred, target_q_values).item()}")
+
+        # with torch.no_grad():
+        #     for name, param in self.model.named_parameters():
+        #         if "weight" in name and len(param.shape) == 2:
+        #             print(f"{name} mean: {param.mean().item():.6f}, std: {param.std().item():.6f}")
+        #             break  # логируем только 1 слой для краткости
+
+        self.optimizer.zero_grad()
+        loss = self.criterion(target_q_values, Q_pred)
+        loss.backward()
+        # for name, param in self.model.named_parameters():
+        #     if param.grad is not None:
+        #         print(f"{name} grad mean: {param.grad.mean().item():.6f}, std: {param.grad.std().item():.6f}")
+
+        # === Градиент: глобальная норма ===
+        
+        # total_norm = 0
+        # grads = []
+        # for name, param in self.model.named_parameters():          # ДЛЯ L2
+        #     if param.grad is not None:
+        #         grad_norm = param.grad.data.norm(2)
+        #         grads.append(param.grad.view(-1))
+        #         total_norm += grad_norm.item() ** 2
+        # total_norm = total_norm ** 0.5
+
+        # 1. Считаем суммарную L1-норму градиентов
+        total_norm = 0.0
+        grads = []
+        for p in self.model.parameters():
+            if p.grad is not None:
+                param_norm = p.grad.data.abs().sum()
+                grads.append(p.grad.view(-1))
+                total_norm += param_norm.item()
+
+        all_grads = torch.cat(grads)
+        grad_min = all_grads.min().item()
+        grad_max = all_grads.max().item()
+        grad_mean = all_grads.mean().item()
+        if self.step % 10 == 0:
+        # Логируем
+            self.loss_log.append(loss.item())
+            self.grad_log.append(total_norm)
+            self.grad_stats_log.append((grad_min, grad_mean, grad_max))
+
+        # torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0)     # Для MSE
+        max_norm = 1.0  # максимальная допустимая L1-норма градиентов
+
+        # # 2. Вычисляем коэффициент обрезки
+        clip_coef = max_norm / (total_norm + 1e-6)  # добавим eps во избежание деления на 0
+
+        # # 3. Применяем обрезку, если коэффициент < 1
+        if clip_coef < 1:
+            for p in self.model.parameters():
+                if p.grad is not None:
+                    p.grad.data.mul_(clip_coef)
+        
+        self.optimizer.step()
+
+        tau = 0.01
+        for target_param, param in zip(self.target_model.parameters(), self.model.parameters()):
+            target_param.data.copy_(tau * param.data + (1.0 - tau) * target_param.data)
+        
+        self.step += 1
         # # Q_new = reward
 
         # # 2: Q_new = r + y * max(next_predicted Q value) -> only do this if not done
@@ -89,10 +177,11 @@ class trainer():
         # # preds[argmax(action)] = Q_new
         # print(f'Target: {target_q_values}')
         # print(f'Pred: {pred}')
-        self.optimizer.zero_grad()
-        loss = self.criterion(target_q_values, Q_pred)
-        loss.backward()
-        self.optimizer.step()
+
+        # self.optimizer.zero_grad()
+        # loss = self.criterion(target_q_values, Q_pred)
+        # loss.backward()
+        # self.optimizer.step()
 
         # state = torch.tensor(state, dtype = torch.float)
         # action = torch.tensor(action, dtype = torch.float)
