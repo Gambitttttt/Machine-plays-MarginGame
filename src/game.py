@@ -541,10 +541,12 @@ def initialize_game(
             if id == 1:
                 players[id].action_type = method
             else:
-                if len(DQN_models) == 0:
-                    action_type = random.choice(['sber_lover', 'lottery_man', 'manufacturer', 'oil_lover', 'gambler', 'cooperator', 'coop_based', 'memory_based'])
-                else:
+                if method == 'DQN' and len(DQN_models) > 0:
                     action_type = random.choices(['sber_lover', 'lottery_man', 'manufacturer', 'oil_lover', 'gambler', 'cooperator', 'coop_based', 'memory_based', 'DQN'], weights=[1/16, 1/16, 1/16, 1/16, 1/16, 1/16, 1/16, 1/16, 1/2])[0] # Пока без DQN
+                elif method == 'Q_table' and len(Q_table_models) > 0:
+                    action_type = random.choices(['sber_lover', 'lottery_man', 'manufacturer', 'oil_lover', 'gambler', 'cooperator', 'coop_based', 'memory_based', 'Q_table'], weights=[1/16, 1/16, 1/16, 1/16, 1/16, 1/16, 1/16, 1/16, 1/2])[0] # Пока без DQN
+                else:
+                    action_type = random.choice(['sber_lover', 'lottery_man', 'manufacturer', 'oil_lover', 'gambler', 'cooperator', 'coop_based', 'memory_based'])
                 players[id].action_type = action_type
                 if action_type == 'Q_table':
                     # print('!!!')
@@ -850,13 +852,16 @@ def train_with_Q_table(self_play):
     LR = 0.1
     EPSILON = 1
     GAMMA = 0.99
-    DECAY = 800000
+    DECAY = 360000
 
     plot_scores = []
     plot_mean_scores = []
     total_score = 0
     top_score = 0
-
+    wins_learning = []
+    top3_learning = []
+    dom_learning = []
+    
     args = parse_args()
     game_config = read_game_config(config_path=args.config_path)
 
@@ -870,10 +875,10 @@ def train_with_Q_table(self_play):
             game.run_training_games_Q_table(epsilon=EPSILON, decay=DECAY, n_games=n_games, trainer=trainer_Q_table, model=model, trained_models=[])
 
             score=basic_metric(dict=game.players, id = 1)
-            
-            if score > top_score:
-                    top_score = score
-                    model.save(name='Q_table_top_without_self_play.npy')
+
+            # if score > top_score:
+            #         top_score = score
+            #         model.save(name='Q_table_top_without_self_play.npy')
 
             print('Game', n_games, 'Score', score, 'Top score:', top_score)
 
@@ -882,25 +887,93 @@ def train_with_Q_table(self_play):
             # mean_score = total_score / n_games
             # plot_mean_scores.append(mean_score)
             # plot(plot_scores, plot_mean_scores)
-            if n_games % 40000 == 0:
+            if n_games % 20000 == 0:
                 model.save(name=f'Q_table_without_self_play_{n_games}.npy')
+
+            if n_games % 20000 == 0:
+                autonomous_game(n_games=10, epochs=100, classes='assessing_trained', model=Q_table(num_states=11000, num_actions=6), model_name=f'Q_table_without_self_play_{n_games}.npy', method='Q_table',
+                    Q_table_models=[],
+                    DQN_models=[])
+                
+                file_path='stats.json'
+                with open(file_path, "r", encoding="utf-8") as file:
+                    data=json.load(file)
+                # path = 'C:/Users/WS user/MarginGame/MarginGame2/MarginGame/Graphs/Duo_comparison_vis/'
+                # for metric in ['wins','top3','domination_rounds','basic metric q1','basic metric q2','basic metric q3','discounted metric q1','discounted metric q2','discounted metric q3']:
+                #     for type in data.keys():
+                #         if type != 'Main':
+                            # plt.clf()
+                            # plt.hist(data[type][metric], bins=50, density=True, label=type, alpha=0.5) #density=True, bins=50?
+                            # plt.hist(data['Main'][metric], bins=50, density=True, label=type, alpha=0.5) #density=True, bins=50?
+                            # plt.legend([type, 'Main'])
+                            # plt.ylabel('Относительная частота')
+                            # plt.xlabel('Значения метрики')
+                            # plt.title(f'Main vs {type}: {metric}')
+                            # name=path+f'Main vs {type}_{metric}.png'
+                            # plt.savefig(name)
+                wins_learning.append(np.mean(data['Main']['wins']))
+                top3_learning.append(np.mean(data['Main']['top3']))
+                dom_learning.append(np.mean(data['Main']['domination_rounds']))
+                plt.clf()
+                plt.plot(wins_learning, label = 'wins', color = 'red', alpha=0.5)
+                plt.plot(top3_learning, label = 'top3', color = 'green', alpha=0.5)
+                plt.plot(dom_learning, label = 'domination', color = 'blue', alpha=0.5)
+                plt.legend()
+                plt.savefig(f'QTmetrics{n_games}.png')
+
             n_games+=1
     else:
-        SAVE_STEPS=80000
-        POLICY_BUFFER_LEN=15
+        SAVE_STEPS=180000
+        POLICY_BUFFER_LEN=10
         PLAY_VS_LATEST_POLICY_RATIO=0.5
-        SWAP_STEPS=80000
+        SWAP_STEPS=180000
         model_folder = deque(maxlen=POLICY_BUFFER_LEN)
+        names_folder = deque(maxlen=POLICY_BUFFER_LEN)
+        models_samples=[]
+        names_samples=[]
         game = initialize_game(game_class=MarginGame, game_config=game_config, verbose=True, classes='original', method='Q_table')
         n_games=1
         while True:
 
             if n_games % SAVE_STEPS == 0:
                 name=f'Q_table_mid-train_with_self_play_{n_games}.npy'
+                names_folder.append(name)
                 model.save(name=name)
                 additional_model = Q_table(num_states=11000, num_actions=6)
                 additional_model.load(file_name=name)
                 model_folder.append(additional_model)
+
+            if n_games % 180000 == 0:
+                autonomous_game(n_games=10, epochs=100, classes='assessing_trained', model=Q_table(num_states=11000, num_actions=6), model_name=f'Q_table_mid-train_with_self_play_{n_games}.npy', method='Q_table',
+                    Q_table_models=names_samples,
+                    DQN_models=[])
+                
+                file_path='stats.json'
+                with open(file_path, "r", encoding="utf-8") as file:
+                    data=json.load(file)
+                # path = 'C:/Users/WS user/MarginGame/MarginGame2/MarginGame/Graphs/Duo_comparison_vis/'
+                # for metric in ['wins','top3','domination_rounds','basic metric q1','basic metric q2','basic metric q3','discounted metric q1','discounted metric q2','discounted metric q3']:
+                #     for type in data.keys():
+                #         if type != 'Main':
+                            # plt.clf()
+                            # plt.hist(data[type][metric], bins=50, density=True, label=type, alpha=0.5) #density=True, bins=50?
+                            # plt.hist(data['Main'][metric], bins=50, density=True, label=type, alpha=0.5) #density=True, bins=50?
+                            # plt.legend([type, 'Main'])
+                            # plt.ylabel('Относительная частота')
+                            # plt.xlabel('Значения метрики')
+                            # plt.title(f'Main vs {type}: {metric}')
+                            # name=path+f'Main vs {type}_{metric}.png'
+                            # plt.savefig(name)
+                wins_learning.append(np.mean(data['Main']['wins']))
+                top3_learning.append(np.mean(data['Main']['top3']))
+                dom_learning.append(np.mean(data['Main']['domination_rounds']))
+                plt.clf()
+                plt.plot(wins_learning, label = 'wins', color = 'red', alpha=0.5)
+                plt.plot(top3_learning, label = 'top3', color = 'green', alpha=0.5)
+                plt.plot(dom_learning, label = 'domination', color = 'blue', alpha=0.5)
+                plt.legend()
+                plt.savefig(f'metrics{n_games}.png')
+
 
             # if n_games < SWAP_STEPS:
             #     game = initialize_game(game_class=MarginGame, game_config=game_config, verbose=True, classes='original', method='Q_table')
@@ -910,44 +983,48 @@ def train_with_Q_table(self_play):
             if n_games % SWAP_STEPS == 0:
                 if len(model_folder) == 1:
                     models_samples = [model_folder[0]] * 7
+                    names_samples = [names_folder[0]] * 7
                 else:
                     models_samples = []
+                    names_samples = []
                     for i in range(7): # игроков 8, выбираем модельки для семерых
                         random_num = random.random()
                         if random_num > PLAY_VS_LATEST_POLICY_RATIO:
                             models_samples.append(model_folder[-1])
+                            names_samples.append(names_folder[-1])
                         else:
                             random_idx = random.choice(range(len(model_folder)-1))
                             models_samples.append(model_folder[random_idx])
+                            names_samples.append(names_folder[random_idx])
                 game = initialize_game(game_class=MarginGame, game_config=game_config, verbose=True, classes='trained', method='Q_table')
-            if len(model_folder) == 0:
-                models_samples = []
+            # if len(model_folder) == 0:
+            #     models_samples = []
 
             game.run_training_games_Q_table(epsilon=EPSILON, decay=DECAY, n_games=n_games % SWAP_STEPS, trainer=trainer_Q_table, model=model, trained_models=models_samples)
             
             score=basic_metric(dict=game.players, id = 1)
-            if score > top_score:
-                    top_score = score
-                    model.save(name='Q_table_top_with_self_play.npy')
+            # if score > top_score:
+            #         top_score = score
+            #         model.save(name='Q_table_top_with_self_play.npy')
 
             print('Game', n_games, 'Score', score, 'Top score:', top_score)
 
-            plot_scores.append(score)
-            total_score += score
-            mean_score = total_score / n_games
-            plot_mean_scores.append(mean_score)
-            plot(plot_scores, plot_mean_scores)
-            if n_games % 40000 == 0:
-                model.save(name=f'Q_table_with_self_play_{n_games}.npy')
+            # plot_scores.append(score)
+            # total_score += score
+            # mean_score = total_score / n_games
+            # plot_mean_scores.append(mean_score)
+            # plot(plot_scores, plot_mean_scores)
+            # if n_games % 180000 == 0:
+            #     model.save(name=f'Q_table_with_self_play_{n_games}.npy')
             n_games+=1
 
 if __name__ == '__main__':                          
     random.seed(42)                            #Q_table(num_states=11000, num_actions=6)                        
-    # autonomous_game(n_games=10, epochs=100, classes='assessing_trained', model=DQN(), model_name='DQN_1000000_self_play_mid-train.pth', method='DQN',
+    # autonomous_game(n_games=5, epochs=50, classes='assessing_trained', model=DQN(), model_name='DQN_20000_self_play_mid-train.pth', method='DQN',
     #                 Q_table_models=['Q_table_mid-train_with_self_play_80000 (1).npy', 'Q_table_top_with_self_play (5).npy', 'Q_table_without_self_play_40000 (1).npy', 'Q_table_without_self_play_120000.npy'],
     #                 DQN_models=['DQN_10000_without_self-play_mid-train.pth', 'DQN_20000_without_self-play_mid-train.pth', 'DQN_40000_without_self-play_mid-train.pth', 'DQN_40000_without_self-play_mid-train_l2_grad_clip.pth', 'DQN_1000000_self_play_mid-train.pth'])
-    train_with_DQN(self_play=True)
-    # train_with_Q_table(self_play=False)
+    # train_with_DQN(self_play=True)
+    train_with_Q_table(self_play=True)
 
     # file_path='stats.json'
     # with open(file_path, "r", encoding="utf-8") as file:
