@@ -4,6 +4,7 @@ import torch.nn.functional as F
 from torch import nn, optim
 import matplotlib.pyplot as plt
 import os
+import random
 
 class DQN(nn.Module):
     def __init__(self):
@@ -60,10 +61,6 @@ class trainer():
             action = torch.unsqueeze(action, 0)
             reward = torch.unsqueeze(reward, 0)
             done = torch.unsqueeze(done, 0)
-            # done = (done, )
-        # print(f'STATE: {state}')
-        # print(f'NEXT_STATE: {next_state}')
-        # print(f'DONE: {done}')
         pred = self.model(state)
         # actual_actions = action
         # actual_actions = torch.argmax(action, dim = 1).unsqueeze(1)
@@ -78,15 +75,6 @@ class trainer():
         # print(f'REWARD: {reward.unsqueeze(1)}')
         # print(f'ACTIONS_INDICES: {actual_actions}')
         Q_pred = pred.gather(1, action)
-        # print(f'Q_PRED: {Q_pred}')
-        # target = pred.clone().detach()
-        # for idx in range(len(done)):
-        #     Q_new = reward[idx]
-        #     if not done[idx]:
-        #         with torch.no_grad():
-        #             Q_new = reward[idx] + self.gamma * torch.max(self.target_model(next_state[idx]))
-
-            # target[idx][torch.argmax(action[idx]).item()] = Q_new
 
         with torch.no_grad():
             # print(f'Target_model from next_state: {self.target_model(next_state)}')
@@ -107,12 +95,6 @@ class trainer():
         # print(f"Chosen action: {action[0].item()}, Q_pred: {Q_pred[0].item()}")
         # print(f"Target Q-value: {target_q_values[0].item()}")
         # print(f"Loss: {self.criterion(Q_pred, target_q_values).item()}")
-
-        # with torch.no_grad():
-        #     for name, param in self.model.named_parameters():
-        #         if "weight" in name and len(param.shape) == 2:
-        #             print(f"{name} mean: {param.mean().item():.6f}, std: {param.std().item():.6f}")
-        #             break  # логируем только 1 слой для краткости
 
         self.optimizer.zero_grad()
         loss = self.criterion(target_q_values, Q_pred)
@@ -170,42 +152,6 @@ class trainer():
             target_param.data.copy_(tau * param.data + (1.0 - tau) * target_param.data)
         
         self.step += 1
-        # # Q_new = reward
-
-        # # 2: Q_new = r + y * max(next_predicted Q value) -> only do this if not done
-        # # pred.clone()
-        # # preds[argmax(action)] = Q_new
-        # print(f'Target: {target_q_values}')
-        # print(f'Pred: {pred}')
-
-        # self.optimizer.zero_grad()
-        # loss = self.criterion(target_q_values, Q_pred)
-        # loss.backward()
-        # self.optimizer.step()
-
-        # state = torch.tensor(state, dtype = torch.float)
-        # action = torch.tensor(action, dtype = torch.float)
-        # reward = torch.tensor(reward, dtype = torch.float)
-        # next_state = torch.tensor(next_state, dtype = torch.float)
-        # print(state)
-        # if len(state.shape) == 1:
-        #     # (1, x)
-        #     state = torch.unsqueeze(state, 0)
-        #     next_state = torch.unsqueeze(next_state, 0)
-        #     action = torch.unsqueeze(action, 0)
-        #     reward = torch.unsqueeze(reward, 0)
-        #     done = (done, )
-
-        # q_values = self.model(state).gather(1, action)
-
-        # with torch.no_grad():
-        #     next_q_values = self.target_model(next_state).max(1, keepdim=True)[0]
-        #     target_q_values = reward + (1 - done) * self.gamma * next_q_values
-
-        # self.optimizer.zero_grad()
-        # loss = self.criterion(q_values, target_q_values)
-        # loss.backward()
-        # self.optimizer.step()
         
 class Q_table():
     def __init__(self, num_states, num_actions):
@@ -222,7 +168,11 @@ class Q_table():
     
     def get_pred(self, state):
         transformed_state = self.transform_state(state)
-        return np.argmax(self.table[transformed_state])+1
+        # weights = self.table[transformed_state]
+        # print(weights)
+        # weights = weights / sum(weights) if sum(weights) != 0 else [1/6] * 6
+        return np.argmax(self.table[transformed_state])+1 # Выбор действия с max Q-val
+        # return random.choices([1, 2, 3, 4, 5, 6], weights=weights)[0] # Выбор действия логит Q-val
     
     def save(self, name):
         model_folder_path = './src'
